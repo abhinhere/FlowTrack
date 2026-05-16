@@ -1,0 +1,29 @@
+"use client";
+
+import { EmptyState } from "@/components/ui/EmptyState";
+import { TaskCard } from "@/components/tasks/TaskCard";
+import { Task } from "@/lib/tasks";
+
+export function TaskList({
+  tasks,
+  onEdit,
+  onDelete,
+  onComplete
+}: {
+  tasks: Task[];
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+  onComplete: (id: string) => void;
+}) {
+  if (tasks.length === 0) {
+    return <EmptyState title="No matching tasks" description="Adjust your filters or create a new task to start tracking progress." />;
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {tasks.map((task) => (
+        <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} />
+      ))}
+    </div>
+  );
+}
