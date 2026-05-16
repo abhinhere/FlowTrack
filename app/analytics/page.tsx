@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BrainCircuit, CalendarClock, CheckCircle2, Target } from "lucide-react";
+import { BarChart3, BrainCircuit, CalendarClock, CheckCircle2, Target, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageSection } from "@/components/layout/PageSection";
 import { CompletionAreaChart, ProductivityChart } from "@/components/analytics/ProductivityChart";
@@ -10,7 +10,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useTasks } from "@/hooks/useTasks";
 
 export default function AnalyticsPage() {
-  const { tasks, stats, isHydrated } = useTasks();
+  const { tasks, stats, isHydrated, clearAllTasks } = useTasks();
   const highPriorityOpen = tasks.filter((task) => task.priority === "High" && task.status !== "Completed").length;
   const dueSoon = tasks.filter((task) => {
     if (!task.deadline || task.status === "Completed") return false;
@@ -20,7 +20,19 @@ export default function AnalyticsPage() {
   }).length;
 
   return (
-    <AppShell title="Analytics" eyebrow="Insights">
+    <AppShell
+      title="Analytics"
+      eyebrow="Insights"
+      action={
+        <button
+          onClick={clearAllTasks}
+          className="inline-flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Reset Data</span>
+        </button>
+      }
+    >
       {!isHydrated ? (
         <LoadingState />
       ) : (

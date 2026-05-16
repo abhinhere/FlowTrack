@@ -14,7 +14,8 @@ export function TaskCard({
   dragListeners,
   dragAttributes,
   style,
-  isDragging = false
+  isDragging = false,
+  readOnly = false
 }: {
   task: Task;
   onEdit: (task: Task) => void;
@@ -24,6 +25,7 @@ export function TaskCard({
   dragAttributes?: DraggableAttributes;
   style?: React.CSSProperties;
   isDragging?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <motion.article
@@ -41,30 +43,58 @@ export function TaskCard({
           <h3 className="break-words text-sm font-semibold leading-6 text-white">{task.title}</h3>
           {task.description && <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-400">{task.description}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            aria-label={`Edit ${task.title}`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onEdit(task)}
-            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-white"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            aria-label={`Delete ${task.title}`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onDelete(task.id)}
-            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              aria-label={`Edit ${task.title}`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => onEdit(task)}
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-white"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              aria-label={`Delete ${task.title}`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => onDelete(task.id)}
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Badge className={priorityAccent[task.priority]}>{task.priority}</Badge>
         <Badge className={statusAccent[task.status]}>{task.status}</Badge>
       </div>
+
+      {task.category === "Weekly" && task.daysOfWeek && task.daysOfWeek.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {task.daysOfWeek.map((day) => (
+            <span key={day} className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-200">
+              {day}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {task.category === "Progress" && (
+        <div className="mt-4 space-y-1.5">
+          <div className="flex items-center justify-between text-xs font-medium">
+            <span className="text-slate-400">Progress</span>
+            <span className="text-pink-300">{task.progressValue ?? 0}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${task.progressValue ?? 0}%` }}
+              className="h-full bg-pink-400"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
         <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500">

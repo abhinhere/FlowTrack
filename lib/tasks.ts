@@ -1,11 +1,16 @@
 export type TaskStatus = "Todo" | "In Progress" | "Completed";
 export type TaskPriority = "Low" | "Medium" | "High";
+export type TaskCategory = "General" | "Routine" | "Weekly" | "Progress";
+export type DayOfWeek = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
 export type Task = {
   id: string;
   title: string;
   description: string;
   priority: TaskPriority;
+  category?: TaskCategory;
+  daysOfWeek?: DayOfWeek[];
+  progressValue?: number;
   deadline: string;
   status: TaskStatus;
   createdAt: string;
@@ -14,6 +19,8 @@ export type Task = {
 
 export const statusList: TaskStatus[] = ["Todo", "In Progress", "Completed"];
 export const priorityList: TaskPriority[] = ["Low", "Medium", "High"];
+export const categoryList: TaskCategory[] = ["General", "Routine", "Weekly", "Progress"];
+export const daysOfWeekList: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const statusAccent: Record<TaskStatus, string> = {
   Todo: "border-slate-700 bg-slate-900/60 text-slate-200",
@@ -27,46 +34,7 @@ export const priorityAccent: Record<TaskPriority, string> = {
   High: "border-pink-400/30 bg-pink-400/10 text-pink-200"
 };
 
-export const seedTasks: Task[] = [
-  {
-    id: "seed-1",
-    title: "Design weekly planning flow",
-    description: "Map the dashboard states, filters, and quick actions for daily review.",
-    priority: "High",
-    deadline: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
-    status: "In Progress",
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
-  },
-  {
-    id: "seed-2",
-    title: "Complete portfolio case study",
-    description: "Write the outcomes section and polish visuals before publishing.",
-    priority: "Medium",
-    deadline: new Date(Date.now() + 86400000 * 4).toISOString().slice(0, 10),
-    status: "Todo",
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-  },
-  {
-    id: "seed-3",
-    title: "Review sprint notes",
-    description: "Summarize blockers and next actions from the last product sync.",
-    priority: "Low",
-    deadline: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
-    status: "Completed",
-    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-    completedAt: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: "seed-4",
-    title: "Prototype analytics cards",
-    description: "Create compact widgets for progress, workload, and focus trends.",
-    priority: "High",
-    deadline: new Date(Date.now() + 86400000 * 6).toISOString().slice(0, 10),
-    status: "Completed",
-    createdAt: new Date(Date.now() - 86400000 * 9).toISOString(),
-    completedAt: new Date(Date.now() - 86400000 * 2).toISOString()
-  }
-];
+export const seedTasks: Task[] = [];
 
 export function createTaskId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

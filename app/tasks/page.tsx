@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Filter, KanbanSquare, List, Plus, Search } from "lucide-react";
+import { Filter, KanbanSquare, List, Plus, Search, Activity } from "lucide-react";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/layout/AppShell";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
@@ -9,7 +10,7 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useTasks } from "@/hooks/useTasks";
-import { Task, TaskPriority, TaskStatus, priorityList, statusList } from "@/lib/tasks";
+import { Task, TaskPriority, TaskStatus, TaskCategory, priorityList, statusList, categoryList } from "@/lib/tasks";
 
 type ViewMode = "board" | "list";
 
@@ -20,6 +21,7 @@ export default function TasksPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<TaskStatus | "All">("All");
   const [priority, setPriority] = useState<TaskPriority | "All">("All");
+  const [category, setCategory] = useState<TaskCategory | "All">("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -28,10 +30,25 @@ export default function TasksPage() {
       const matchesQuery = `${task.title} ${task.description}`.toLowerCase().includes(query.toLowerCase());
       const matchesStatus = status === "All" || task.status === status;
       const matchesPriority = priority === "All" || task.priority === priority;
+      const taskCategory = task.category || "General";
+      const matchesCategory = category === "All" || taskCategory === category;
 
-      return matchesQuery && matchesStatus && matchesPriority;
+      return matchesQuery && matchesStatus && matchesPriority && matchesCategory;
     });
-  }, [priority, query, status, tasks]);
+  }, [priority, query, status, category, tasks]);
+
+  const overallProgress = useMemo(() => {
+    if (filteredTasks.length === 0) return 0;
+    
+    const totalScore = filteredTasks.reduce((acc, task) => {
+      if (task.category === "Progress") {
+        return acc + (task.progressValue ?? 0);
+      }
+      return acc + (task.status === "Completed" ? 100 : 0);
+    }, 0);
+    
+    return Math.round(totalScore / filteredTasks.length);
+  }, [filteredTasks]);
 
   function openCreate() {
     setEditingTask(null);
@@ -79,9 +96,32 @@ export default function TasksPage() {
         <LoadingState />
       ) : (
         <div className="space-y-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-card">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-pink-500/20 text-pink-300">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Daily Progress</h3>
+                  <p className="text-xs text-slate-400">Based on active filters</p>
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-white">{overallProgress}%</div>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-surface-900 shadow-inner">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${overallProgress}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-pink-500 to-violet-500"
+              />
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-card">
-            <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
-              <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-surface-900 px-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
+              <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-surface-900 px-3 sm:col-span-2 lg:col-span-1">
                 <Search className="h-4 w-4 text-slate-500" />
                 <input
                   value={query}
@@ -98,7 +138,7 @@ export default function TasksPage() {
                   onChange={(event) => setStatus(event.target.value as TaskStatus | "All")}
                   className="bg-transparent text-white outline-none"
                 >
-                  <option>All</option>
+                  <option>All Status</option>
                   {statusList.map((item) => (
                     <option key={item}>{item}</option>
                   ))}
@@ -106,17 +146,28 @@ export default function TasksPage() {
               </label>
 
               <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value as TaskCategory | "All")}
+                className="min-h-11 rounded-xl border border-white/10 bg-surface-900 px-3 text-sm text-white outline-none"
+              >
+                <option>All Types</option>
+                {categoryList.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+
+              <select
                 value={priority}
                 onChange={(event) => setPriority(event.target.value as TaskPriority | "All")}
                 className="min-h-11 rounded-xl border border-white/10 bg-surface-900 px-3 text-sm text-white outline-none"
               >
-                <option>All</option>
+                <option>All Priorities</option>
                 {priorityList.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
 
-              <div className="grid grid-cols-2 rounded-xl border border-white/10 bg-surface-900 p-1">
+              <div className="grid grid-cols-2 rounded-xl border border-white/10 bg-surface-900 p-1 sm:col-span-2 lg:col-span-1">
                 <button
                   aria-label="Board view"
                   onClick={() => setViewMode("board")}

@@ -5,6 +5,7 @@ import {
   Task,
   TaskPriority,
   TaskStatus,
+  TaskCategory,
   calculateStats,
   createTaskId,
   seedTasks
@@ -16,6 +17,9 @@ type TaskInput = {
   title: string;
   description: string;
   priority: TaskPriority;
+  category?: TaskCategory;
+  daysOfWeek?: import("@/lib/tasks").DayOfWeek[];
+  progressValue?: number;
   deadline: string;
   status: TaskStatus;
 };
@@ -101,6 +105,12 @@ export function useTasks() {
     );
   }
 
+  function clearAllTasks() {
+    if (window.confirm("Are you sure you want to delete all tasks? This cannot be undone.")) {
+      setTasks([]);
+    }
+  }
+
   return {
     tasks,
     stats,
@@ -108,6 +118,7 @@ export function useTasks() {
     addTask,
     updateTask,
     deleteTask,
-    setTaskStatus
+    setTaskStatus,
+    clearAllTasks
   };
 }

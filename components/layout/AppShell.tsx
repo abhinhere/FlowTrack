@@ -7,18 +7,19 @@ import {
   BarChart3,
   CheckSquare,
   Home,
-  LayoutDashboard,
   Menu,
   Plus,
   Search,
   Sparkles,
-  X
+  X,
+  RotateCcw
 } from "lucide-react";
 import { useState } from "react";
+import { InstallAppButton } from "@/components/ui/InstallAppButton";
+import { useStreak } from "@/hooks/useStreak";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/analytics", label: "Analytics", icon: BarChart3 }
 ];
@@ -69,7 +70,12 @@ export function AppShell({
                       <X className="h-5 w-5" />
                     </button>
                   </div>
-                  <NavItems onNavigate={() => setIsOpen(false)} />
+                  <div className="flex flex-1 flex-col">
+                    <NavItems onNavigate={() => setIsOpen(false)} />
+                    <div className="mt-auto pt-8">
+                      <StreakWidget />
+                    </div>
+                  </div>
                 </motion.div>
               </motion.div>
             )}
@@ -96,7 +102,10 @@ export function AppShell({
                   <span className="text-sm">Search workspace</span>
                 </div>
 
-                {action}
+                <div className="flex items-center gap-3">
+                  <InstallAppButton />
+                  {action}
+                </div>
               </div>
             </header>
 
@@ -108,19 +117,44 @@ export function AppShell({
 }
 
 function Sidebar() {
+  const { streak, isHydrated, resetStreak } = useStreak();
+
   return (
-    <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-surface-900/82 p-4 backdrop-blur-xl lg:block">
+    <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-white/10 bg-surface-900/82 p-4 backdrop-blur-xl lg:flex">
       <Logo />
       <NavItems />
-      <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
-        <div className="flex items-center gap-2 text-blue-200">
+      <div className="mt-auto">
+        <StreakWidget />
+      </div>
+    </aside>
+  );
+}
+
+function StreakWidget() {
+  const { streak, isHydrated, resetStreak } = useStreak();
+
+  return (
+    <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
+      <div className="flex items-center justify-between text-blue-200">
+        <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4" />
           <span className="text-sm font-medium">Focus streak</span>
         </div>
-        <p className="mt-2 text-2xl font-semibold text-white">12 days</p>
-        <p className="mt-1 text-xs leading-5 text-slate-400">Small wins, logged daily.</p>
+        {streak.count > 0 && (
+          <button
+            onClick={resetStreak}
+            aria-label="Reset streak"
+            className="rounded p-1 opacity-60 transition hover:bg-blue-400/20 hover:opacity-100"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
-    </aside>
+      <p className="mt-2 text-2xl font-semibold text-white">
+        {!isHydrated ? "-" : streak.count} {streak.count === 1 ? "day" : "days"}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-slate-400">Small wins, logged daily.</p>
+    </div>
   );
 }
 

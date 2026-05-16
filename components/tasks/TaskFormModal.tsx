@@ -2,13 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, Flag, ListTodo, X } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, priorityList, statusList } from "@/lib/tasks";
+import { Calendar, Flag, ListTodo, X, Folder, CalendarDays, Activity } from "lucide-react";
+import { Task, TaskPriority, TaskStatus, TaskCategory, DayOfWeek, priorityList, statusList, categoryList, daysOfWeekList } from "@/lib/tasks";
 
 type FormState = {
   title: string;
   description: string;
   priority: TaskPriority;
+  category: TaskCategory;
+  daysOfWeek: DayOfWeek[];
+  progressValue: number;
   deadline: string;
   status: TaskStatus;
 };
@@ -17,6 +20,9 @@ const emptyForm: FormState = {
   title: "",
   description: "",
   priority: "Medium",
+  category: "General",
+  daysOfWeek: [],
+  progressValue: 0,
   deadline: "",
   status: "Todo"
 };
@@ -40,6 +46,9 @@ export function TaskFormModal({
         title: task.title,
         description: task.description,
         priority: task.priority,
+        category: task.category ?? "General",
+        daysOfWeek: task.daysOfWeek ?? [],
+        progressValue: task.progressValue ?? 0,
         deadline: task.deadline,
         status: task.status
       });
@@ -120,7 +129,7 @@ export function TaskFormModal({
                 />
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <label>
                   <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
                     <Flag className="h-4 w-4 text-violet-300" />
@@ -139,13 +148,30 @@ export function TaskFormModal({
 
                 <label>
                   <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
+                    <Folder className="h-4 w-4 text-amber-300" />
+                    Category
+                  </span>
+                  <select
+                    value={form.category}
+                    onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as TaskCategory }))}
+                    className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
+                  >
+                    {categoryList.map((cat) => (
+                      <option key={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={form.category === "Routine" ? "opacity-50 pointer-events-none grayscale" : ""}>
+                  <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
                     <Calendar className="h-4 w-4 text-cyan-300" />
                     Deadline
                   </span>
                   <input
                     type="date"
-                    value={form.deadline}
+                    value={form.category === "Routine" ? "" : form.deadline}
                     onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))}
+                    disabled={form.category === "Routine"}
                     className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
                   />
                 </label>
@@ -163,6 +189,80 @@ export function TaskFormModal({
                   </select>
                 </label>
               </div>
+
+              <AnimatePresence mode="popLayout">
+                {form.category === "Weekly" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <label className="block pt-2">
+                      <span className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+                        <CalendarDays className="h-4 w-4 text-emerald-300" />
+                        Specific Days
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {daysOfWeekList.map((day) => {
+                          const isSelected = form.daysOfWeek.includes(day);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => {
+                                setForm((current) => ({
+                                  ...current,
+                                  daysOfWeek: isSelected
+                                    ? current.daysOfWeek.filter((d) => d !== day)
+                                    : [...current.daysOfWeek, day]
+                                }));
+                              }}
+                              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                                isSelected
+                                  ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-200"
+                                  : "border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]"
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </label>
+                  </motion.div>
+                )}
+
+                {form.category === "Progress" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <label className="block pt-2">
+                      <div className="mb-3 flex items-center justify-between text-sm font-medium text-slate-300">
+                        <span className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-pink-300" />
+                          Completion Progress
+                        </span>
+                        <span className="text-white">{form.progressValue}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={form.progressValue}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, progressValue: parseInt(event.target.value, 10) }))
+                        }
+                        className="w-full accent-pink-400"
+                      />
+                    </label>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
