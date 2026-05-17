@@ -9,6 +9,7 @@ export function TaskList({
   onEdit,
   onDelete,
   onComplete,
+  onUpdateTask,
   readOnly = false
 }: {
   tasks: Task[];

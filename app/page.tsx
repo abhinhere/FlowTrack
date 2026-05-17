@@ -96,15 +96,7 @@ export default function HomePage() {
               onEdit={noop}
               onDelete={noop}
               onComplete={handleComplete}
-              onUpdateTask={(id, updates) =>
-                updateTask(id, {
-                  title: updates.title || "",
-                  description: updates.description || "",
-                  priority: updates.priority || "medium",
-                  dueDate: updates.dueDate || "",
-                  completed: updates.completed || false,
-                })
-              }
+              onUpdateTask={updateTask}
               readOnly={true}
             />
           </div>

@@ -135,7 +135,7 @@ export function useTasks() {
     return task;
   }
 
-  async function updateTask(id: string, input: Partial<TaskInput>) {
+  async function updateTask(id: string, input: Partial<Task>) {
     if (user) {
       const task = tasks.find(t => t.id === id);
       if (!task) return;
