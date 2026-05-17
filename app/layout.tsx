@@ -21,6 +21,8 @@ export const viewport: Viewport = {
   maximumScale: 1
 };
 
+import { AuthProvider } from "@/components/auth/AuthProvider";
+
 export default function RootLayout({
   children
 }: Readonly<{
@@ -29,8 +31,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <PwaRegister />
-        <ToastProvider>{children}</ToastProvider>
+        <AuthProvider>
+          <PwaRegister />
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

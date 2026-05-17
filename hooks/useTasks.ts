@@ -10,6 +10,9 @@ import {
   createTaskId,
   seedTasks
 } from "@/lib/tasks";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const STORAGE_KEY = "flowtrack.tasks";
 
@@ -27,32 +30,79 @@ type TaskInput = {
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (authLoading) return;
 
-    if (saved) {
-      try {
-        setTasks(JSON.parse(saved) as Task[]);
-      } catch {
+    if (user) {
+      // User is logged in, sync with Firestore
+      const tasksRef = collection(db, "users", user.uid, "tasks");
+      
+      const unsubscribe = onSnapshot(tasksRef, (snapshot) => {
+        const firestoreTasks = snapshot.docs.map(doc => doc.data() as Task);
+        
+        // Data Migration: Check if local storage has tasks that aren't in Firestore yet
+        // We only do this once after login if Firestore is empty
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        if (saved && firestoreTasks.length === 0) {
+          try {
+            const localTasks = JSON.parse(saved) as Task[];
+            if (localTasks.length > 0) {
+              const batch = writeBatch(db);
+              localTasks.forEach(task => {
+                const docRef = doc(tasksRef, task.id);
+                batch.set(docRef, task);
+              });
+              batch.commit().then(() => {
+                window.localStorage.removeItem(STORAGE_KEY);
+              });
+              
+              // Sort locally for immediate feedback
+              localTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              setTasks(localTasks);
+              setIsHydrated(true);
+              return;
+            }
+          } catch (e) {
+            console.error("Migration error", e);
+          }
+        }
+
+        firestoreTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setTasks(firestoreTasks);
+        setIsHydrated(true);
+      });
+
+      return () => unsubscribe();
+    } else {
+      // User not logged in, use local storage
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+
+      if (saved) {
+        try {
+          setTasks(JSON.parse(saved) as Task[]);
+        } catch {
+          setTasks(seedTasks);
+        }
+      } else {
         setTasks(seedTasks);
       }
-    } else {
-      setTasks(seedTasks);
+
+      setIsHydrated(true);
     }
+  }, [user, authLoading]);
 
-    setIsHydrated(true);
-  }, []);
-
+  // Sync back to local storage ONLY if NOT logged in
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !user && !authLoading) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
     }
-  }, [isHydrated, tasks]);
+  }, [isHydrated, tasks, user, authLoading]);
 
   const stats = useMemo(() => calculateStats(tasks), [tasks]);
 
-  function addTask(input: TaskInput) {
+  async function addTask(input: TaskInput) {
     const now = new Date().toISOString();
     const task: Task = {
       id: createTaskId(),
@@ -61,53 +111,110 @@ export function useTasks() {
       completedAt: input.status === "Completed" ? now : undefined
     };
 
-    setTasks((current) => [task, ...current]);
+    if (user) {
+      const docRef = doc(db, "users", user.uid, "tasks", task.id);
+      await setDoc(docRef, task);
+    } else {
+      setTasks((current) => [task, ...current]);
+    }
+    
     return task;
   }
 
-  function updateTask(id: string, input: TaskInput) {
-    setTasks((current) =>
-      current.map((task) => {
-        if (task.id !== id) return task;
+  async function updateTask(id: string, input: TaskInput) {
+    if (user) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      
+      const becameCompleted = task.status !== "Completed" && input.status === "Completed";
+      const leftCompleted = task.status === "Completed" && input.status !== "Completed";
 
-        const becameCompleted = task.status !== "Completed" && input.status === "Completed";
-        const leftCompleted = task.status === "Completed" && input.status !== "Completed";
+      const updatedTask = {
+        ...task,
+        ...input,
+        completedAt: becameCompleted
+          ? new Date().toISOString()
+          : leftCompleted
+            ? undefined
+            : task.completedAt
+      };
+      
+      const docRef = doc(db, "users", user.uid, "tasks", id);
+      await setDoc(docRef, updatedTask);
+    } else {
+      setTasks((current) =>
+        current.map((task) => {
+          if (task.id !== id) return task;
 
-        return {
-          ...task,
-          ...input,
-          completedAt: becameCompleted
-            ? new Date().toISOString()
-            : leftCompleted
-              ? undefined
-              : task.completedAt
-        };
-      })
-    );
+          const becameCompleted = task.status !== "Completed" && input.status === "Completed";
+          const leftCompleted = task.status === "Completed" && input.status !== "Completed";
+
+          return {
+            ...task,
+            ...input,
+            completedAt: becameCompleted
+              ? new Date().toISOString()
+              : leftCompleted
+                ? undefined
+                : task.completedAt
+          };
+        })
+      );
+    }
   }
 
-  function deleteTask(id: string) {
-    setTasks((current) => current.filter((task) => task.id !== id));
+  async function deleteTask(id: string) {
+    if (user) {
+      const docRef = doc(db, "users", user.uid, "tasks", id);
+      await deleteDoc(docRef);
+    } else {
+      setTasks((current) => current.filter((task) => task.id !== id));
+    }
   }
 
-  function setTaskStatus(id: string, status: TaskStatus) {
-    setTasks((current) =>
-      current.map((task) => {
-        if (task.id !== id) return task;
-        const isNowCompleted = status === "Completed";
+  async function setTaskStatus(id: string, status: TaskStatus) {
+    if (user) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      
+      const isNowCompleted = status === "Completed";
+      const updatedTask = {
+        ...task,
+        status,
+        completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
+      };
+      
+      const docRef = doc(db, "users", user.uid, "tasks", id);
+      await setDoc(docRef, updatedTask);
+    } else {
+      setTasks((current) =>
+        current.map((task) => {
+          if (task.id !== id) return task;
+          const isNowCompleted = status === "Completed";
 
-        return {
-          ...task,
-          status,
-          completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
-        };
-      })
-    );
+          return {
+            ...task,
+            status,
+            completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
+          };
+        })
+      );
+    }
   }
 
-  function clearAllTasks() {
+  async function clearAllTasks() {
     if (window.confirm("Are you sure you want to delete all tasks? This cannot be undone.")) {
-      setTasks([]);
+      if (user) {
+        // Delete all from Firestore
+        const batch = writeBatch(db);
+        tasks.forEach(task => {
+          const docRef = doc(db, "users", user.uid, "tasks", task.id);
+          batch.delete(docRef);
+        });
+        await batch.commit();
+      } else {
+        setTasks([]);
+      }
     }
   }
 

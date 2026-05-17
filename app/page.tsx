@@ -9,12 +9,14 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useTasks } from "@/hooks/useTasks";
 import { useStreak } from "@/hooks/useStreak";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Task } from "@/lib/tasks";
 
 export default function HomePage() {
   const { tasks, isHydrated, updateTask, setTaskStatus } = useTasks();
   const { incrementStreak } = useStreak();
   const { notify } = useToast();
+  const { user } = useAuth();
 
   const todaysTasks = useMemo(() => {
     const todayStr = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(new Date());
@@ -65,9 +67,10 @@ export default function HomePage() {
 
   // We provide a dummy edit/delete function since readOnly hides these buttons anyway
   const noop = () => {};
+  const firstName = user?.displayName?.split(" ")[0] || "there";
 
   return (
-    <AppShell title="Home" eyebrow="Today's Flow">
+    <AppShell title="Home" eyebrow={user ? `Hi, ${firstName}` : "Today's Flow"}>
       {!isHydrated ? (
         <LoadingState />
       ) : (

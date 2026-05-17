@@ -24,6 +24,8 @@ const navItems = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 }
 ];
 
+import { useAuth } from "@/components/auth/AuthProvider";
+
 export function AppShell({
   children,
   title,
@@ -36,6 +38,7 @@ export function AppShell({
   action?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signInWithGoogle, signOut, loading } = useAuth();
 
   return (
     <div className="min-h-screen bg-surface-950 text-white">
@@ -104,6 +107,18 @@ export function AppShell({
 
                 <div className="flex items-center gap-3">
                   <InstallAppButton />
+                  {loading ? (
+                    <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
+                  ) : user ? (
+                    <button onClick={signOut} className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition">
+                      <img src={user.photoURL || ""} alt="User" className="h-5 w-5 rounded-full" />
+                      <span className="hidden sm:inline">Sign out</span>
+                    </button>
+                  ) : (
+                    <button onClick={signInWithGoogle} className="rounded-xl bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-glow hover:bg-blue-400 transition">
+                      Sign in
+                    </button>
+                  )}
                   {action}
                 </div>
               </div>
