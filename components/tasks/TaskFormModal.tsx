@@ -176,16 +176,16 @@ export function TaskFormModal({
                   </select>
                 </label>
 
-                <label className={form.category === "Routine" ? "opacity-50 pointer-events-none grayscale" : ""}>
+                <label className={form.category === "Daily" ? "opacity-50 pointer-events-none grayscale" : ""}>
                   <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
                     <Calendar className="h-4 w-4 text-cyan-300" />
                     Deadline
                   </span>
                   <input
                     type="date"
-                    value={form.category === "Routine" ? "" : form.deadline}
+                    value={form.category === "Daily" ? "" : form.deadline}
                     onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))}
-                    disabled={form.category === "Routine"}
+                    disabled={form.category === "Daily"}
                     className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
                   />
                 </label>

@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart3,
+  ArrowLeft,
   CheckSquare,
   Home,
+  ListChecks,
   Menu,
-  Plus,
   Search,
   Sparkles,
   X,
   RotateCcw,
-  Bird,
   Terminal
 } from "lucide-react";
 import { useState } from "react";
@@ -24,7 +23,6 @@ const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/dev-corner", label: "Dev Corner", icon: Terminal },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 }
 ];
 
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -42,6 +40,9 @@ export function AppShell({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signInWithGoogle, signOut, loading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const isHome = pathname === "/";
 
   return (
     <div className="min-h-screen bg-surface-950 text-white">
@@ -78,8 +79,9 @@ export function AppShell({
                   </div>
                   <div className="flex flex-1 flex-col">
                     <NavItems onNavigate={() => setIsOpen(false)} />
-                    <div className="mt-auto pt-8">
+                    <div className="mt-auto pt-8 space-y-4">
                       <StreakWidget />
+                      <Credit />
                     </div>
                   </div>
                 </motion.div>
@@ -90,6 +92,7 @@ export function AppShell({
           <main className="min-w-0 flex-1 lg:pl-72">
             <header className="sticky top-0 z-30 border-b border-white/10 bg-surface-950/80 backdrop-blur-xl">
               <div className="flex min-h-20 items-center gap-4 px-4 sm:px-6 lg:px-8">
+                {/* Hamburger — mobile only */}
                 <button
                   aria-label="Open menu"
                   onClick={() => setIsOpen(true)}
@@ -97,6 +100,18 @@ export function AppShell({
                 >
                   <Menu className="h-5 w-5" />
                 </button>
+
+                {/* Back-to-home button — shown on every page except Home */}
+                {!isHome && (
+                  <button
+                    aria-label="Go to home"
+                    onClick={() => router.push("/")}
+                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Home</span>
+                  </button>
+                )}
 
                 <div className="min-w-0 flex-1">
                   {eyebrow && <p className="text-xs font-medium uppercase tracking-[0.22em] text-blue-300">{eyebrow}</p>}
@@ -135,14 +150,13 @@ export function AppShell({
 }
 
 function Sidebar() {
-  const { streak, isHydrated, resetStreak } = useStreak();
-
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-white/10 bg-surface-900/82 p-4 backdrop-blur-xl lg:flex">
       <Logo />
       <NavItems />
-      <div className="mt-auto">
+      <div className="mt-auto space-y-4">
         <StreakWidget />
+        <Credit />
       </div>
     </aside>
   );
@@ -176,11 +190,27 @@ function StreakWidget() {
   );
 }
 
+function Credit() {
+  return (
+    <a
+      href="https://github.com/abhinhere"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-slate-600 transition hover:text-slate-400"
+    >
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current shrink-0" aria-hidden>
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.468-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.3 1.23A11.51 11.51 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.924.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .322.216.694.825.576C20.565 21.796 24 17.298 24 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      <span>by <span className="text-slate-500">@abhinhere</span></span>
+    </a>
+  );
+}
+
 function Logo() {
   return (
     <Link href="/" className="flex items-center gap-3">
       <div className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-500 text-white shadow-glow">
-        <Bird className="h-5 w-5" />
+        <ListChecks className="h-5 w-5" />
       </div>
       <div>
         <p className="text-base font-semibold text-white">FlowTrack</p>

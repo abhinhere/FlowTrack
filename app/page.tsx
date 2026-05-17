@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
-import { Activity } from "lucide-react";
+import { useMemo, useEffect, useState } from "react";
+import { Activity, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/layout/AppShell";
 import { TaskList } from "@/components/tasks/TaskList";
+import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useTasks } from "@/hooks/useTasks";
@@ -13,17 +14,19 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Task } from "@/lib/tasks";
 
 export default function HomePage() {
-  const { tasks, isHydrated, updateTask, setTaskStatus } = useTasks();
+  const { tasks, isHydrated, updateTask, setTaskStatus, addTask } = useTasks();
   const { incrementStreak } = useStreak();
   const { notify } = useToast();
   const { user } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todaysTasks = useMemo(() => {
     const todayStr = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(new Date());
 
     return tasks.filter((task) => {
-      // Show routine tasks
-      if (task.category === "Routine") return true;
+      // Show daily tasks
+      if (task.category === "Daily") return true;
 
       // Show weekly tasks only if today is one of the scheduled days
       if (task.category === "Weekly" && task.daysOfWeek) {
@@ -78,6 +81,13 @@ export default function HomePage() {
   const noop = () => { };
   const firstName = user?.displayName?.split(" ")[0] || "there";
 
+  function handleAddTask(input: Parameters<typeof addTask>[0]) {
+    addTask(input);
+    notify({ title: "Task added" });
+    setIsModalOpen(false);
+    setEditingTask(null);
+  }
+
   return (
     <AppShell title="Home" eyebrow={user ? `Hi, ${firstName}` : "Today's Flow"}>
       {!isHydrated ? (
@@ -109,17 +119,38 @@ export default function HomePage() {
 
           <div>
             <h2 className="mb-4 text-lg font-semibold text-white">Today's Checklist</h2>
-            <TaskList
-              tasks={todaysTasks}
-              onEdit={noop}
-              onDelete={noop}
-              onComplete={handleComplete}
-              onUpdateTask={updateTask}
-              readOnly={true}
-            />
+            {todaysTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] py-14 text-center">
+                <div className="grid h-14 w-14 place-items-center rounded-2xl bg-blue-500/10 text-blue-300">
+                  <Plus className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">No tasks for today</p>
+                  <p className="mt-1 text-sm text-slate-500">Add a task to start building your flow</p>
+                </div>
+                <button
+                  onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-blue-400"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Task
+                </button>
+              </div>
+            ) : (
+              <TaskList
+                tasks={todaysTasks}
+                onEdit={noop}
+                onDelete={noop}
+                onComplete={handleComplete}
+                onUpdateTask={updateTask}
+                readOnly={true}
+              />
+            )}
           </div>
         </div>
       )}
+
+      <TaskFormModal isOpen={isModalOpen} task={editingTask} onClose={() => setIsModalOpen(false)} onSubmit={handleAddTask} />
     </AppShell>
   );
 }
