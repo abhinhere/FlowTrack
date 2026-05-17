@@ -135,13 +135,13 @@ export function useTasks() {
     return task;
   }
 
-  async function updateTask(id: string, input: TaskInput) {
+  async function updateTask(id: string, input: Partial<TaskInput>) {
     if (user) {
       const task = tasks.find(t => t.id === id);
       if (!task) return;
       
-      const becameCompleted = task.status !== "Completed" && input.status === "Completed";
-      const leftCompleted = task.status === "Completed" && input.status !== "Completed";
+      const becameCompleted = input.status !== undefined && task.status !== "Completed" && input.status === "Completed";
+      const leftCompleted = input.status !== undefined && task.status === "Completed" && input.status !== "Completed";
 
       const updatedTask = {
         ...task,
@@ -160,8 +160,8 @@ export function useTasks() {
         current.map((task) => {
           if (task.id !== id) return task;
 
-          const becameCompleted = task.status !== "Completed" && input.status === "Completed";
-          const leftCompleted = task.status === "Completed" && input.status !== "Completed";
+          const becameCompleted = input.status !== undefined && task.status !== "Completed" && input.status === "Completed";
+          const leftCompleted = input.status !== undefined && task.status === "Completed" && input.status !== "Completed";
 
           return {
             ...task,
