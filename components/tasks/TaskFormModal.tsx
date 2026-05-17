@@ -2,8 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, Flag, ListTodo, X, Folder, CalendarDays, Activity } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, TaskCategory, DayOfWeek, priorityList, statusList, categoryList, daysOfWeekList } from "@/lib/tasks";
+import { Calendar, Flag, ListTodo, X, Folder, CalendarDays, Plus, Trash2 } from "lucide-react";
+import { Task, TaskPriority, TaskStatus, TaskCategory, DayOfWeek, Subtask, priorityList, statusList, categoryList, daysOfWeekList, createTaskId } from "@/lib/tasks";
 
 type FormState = {
   title: string;
@@ -11,7 +11,7 @@ type FormState = {
   priority: TaskPriority;
   category: TaskCategory;
   daysOfWeek: DayOfWeek[];
-  progressValue: number;
+  subtasks: Subtask[];
   deadline: string;
   status: TaskStatus;
 };
@@ -20,9 +20,9 @@ const emptyForm: FormState = {
   title: "",
   description: "",
   priority: "Medium",
-  category: "General",
+  category: "Deadline",
   daysOfWeek: [],
-  progressValue: 0,
+  subtasks: [],
   deadline: "",
   status: "Todo"
 };
@@ -39,6 +39,7 @@ export function TaskFormModal({
   onSubmit: (task: FormState) => void;
 }) {
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
   useEffect(() => {
     if (task) {
@@ -46,15 +47,16 @@ export function TaskFormModal({
         title: task.title,
         description: task.description,
         priority: task.priority,
-        category: task.category ?? "General",
+        category: task.category ?? "Deadline",
         daysOfWeek: task.daysOfWeek ?? [],
-        progressValue: task.progressValue ?? 0,
+        subtasks: task.subtasks ?? [],
         deadline: task.deadline,
         status: task.status
       });
     } else {
       setForm(emptyForm);
     }
+    setNewSubtaskTitle("");
   }, [task, isOpen]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -66,6 +68,18 @@ export function TaskFormModal({
       title: form.title.trim(),
       description: form.description.trim()
     });
+  }
+
+  function addSubtask() {
+    if (!newSubtaskTitle.trim()) return;
+    setForm(current => ({
+      ...current,
+      subtasks: [
+        ...current.subtasks,
+        { id: createTaskId(), title: newSubtaskTitle.trim(), completed: false }
+      ]
+    }));
+    setNewSubtaskTitle("");
   }
 
   return (
@@ -232,37 +246,48 @@ export function TaskFormModal({
                     </label>
                   </motion.div>
                 )}
-
-                {form.category === "Progress" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <label className="block pt-2">
-                      <div className="mb-3 flex items-center justify-between text-sm font-medium text-slate-300">
-                        <span className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-pink-300" />
-                          Completion Progress
-                        </span>
-                        <span className="text-white">{form.progressValue}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="5"
-                        value={form.progressValue}
-                        onChange={(event) =>
-                          setForm((current) => ({ ...current, progressValue: parseInt(event.target.value, 10) }))
-                        }
-                        className="w-full accent-pink-400"
-                      />
-                    </label>
-                  </motion.div>
-                )}
               </AnimatePresence>
+
+              {/* Subtasks Section */}
+              <div className="pt-2">
+                <span className="mb-2 text-sm font-medium text-slate-300">Subtasks</span>
+                <div className="space-y-2 mb-3">
+                  {form.subtasks.map((st) => (
+                    <div key={st.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-surface-850 px-3 py-2">
+                      <span className="flex-1 text-sm text-slate-200">{st.title}</span>
+                      <button
+                        type="button"
+                        onClick={() => setForm(curr => ({...curr, subtasks: curr.subtasks.filter(s => s.id !== st.id)}))}
+                        className="text-slate-500 hover:text-rose-400 transition"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addSubtask();
+                      }
+                    }}
+                    placeholder="Add a subtask..."
+                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/50 focus:bg-white/[0.07]"
+                  />
+                  <button
+                    type="button"
+                    onClick={addSubtask}
+                    className="rounded-xl bg-white/10 p-2.5 text-slate-300 hover:bg-white/20 hover:text-white transition"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

@@ -11,7 +11,7 @@ import {
   seedTasks
 } from "@/lib/tasks";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "firebase/firestore";
+import { ref, onValue, set, remove, update } from "firebase/database";
 import { db } from "@/lib/firebase";
 
 const STORAGE_KEY = "flowtrack.tasks";
@@ -22,46 +22,71 @@ type TaskInput = {
   priority: TaskPriority;
   category?: TaskCategory;
   daysOfWeek?: import("@/lib/tasks").DayOfWeek[];
-  progressValue?: number;
+  subtasks?: import("@/lib/tasks").Subtask[];
   deadline: string;
   status: TaskStatus;
 };
+
+export function sanitizeTask(obj: any): any {
+  const sanitized = { ...obj };
+  Object.keys(sanitized).forEach(key => {
+    if (sanitized[key] === undefined) {
+      delete sanitized[key];
+    }
+  });
+  return sanitized;
+}
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
+  // 1. Immediately hydrate from local storage on mount (prevents slow initial load)
+  useEffect(() => {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        setTasks(JSON.parse(saved) as Task[]);
+      } catch {
+        setTasks(seedTasks);
+      }
+    } else {
+      setTasks(seedTasks);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // 2. Sync with Realtime Database once auth is resolved
   useEffect(() => {
     if (authLoading) return;
 
     if (user) {
-      // User is logged in, sync with Firestore
-      const tasksRef = collection(db, "users", user.uid, "tasks");
+      // User is logged in, sync with RTDB
+      const tasksRef = ref(db, `users/${user.uid}/tasks`);
       
-      const unsubscribe = onSnapshot(tasksRef, (snapshot) => {
-        const firestoreTasks = snapshot.docs.map(doc => doc.data() as Task);
+      const unsubscribe = onValue(tasksRef, (snapshot) => {
+        const data = snapshot.val();
+        const rtdbTasks = data ? (Object.values(data) as Task[]) : [];
         
-        // Data Migration: Check if local storage has tasks that aren't in Firestore yet
-        // We only do this once after login if Firestore is empty
+        // Data Migration: Check if local storage has tasks that aren't in RTDB yet
         const saved = window.localStorage.getItem(STORAGE_KEY);
-        if (saved && firestoreTasks.length === 0) {
+        if (saved && rtdbTasks.length === 0) {
           try {
             const localTasks = JSON.parse(saved) as Task[];
             if (localTasks.length > 0) {
-              const batch = writeBatch(db);
+              const updates: Record<string, any> = {};
               localTasks.forEach(task => {
-                const docRef = doc(tasksRef, task.id);
-                batch.set(docRef, task);
+                updates[`users/${user.uid}/tasks/${task.id}`] = task;
               });
-              batch.commit().then(() => {
+              
+              update(ref(db), updates).then(() => {
                 window.localStorage.removeItem(STORAGE_KEY);
               });
               
               // Sort locally for immediate feedback
               localTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
               setTasks(localTasks);
-              setIsHydrated(true);
               return;
             }
           } catch (e) {
@@ -69,27 +94,11 @@ export function useTasks() {
           }
         }
 
-        firestoreTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setTasks(firestoreTasks);
-        setIsHydrated(true);
+        rtdbTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setTasks(rtdbTasks);
       });
 
       return () => unsubscribe();
-    } else {
-      // User not logged in, use local storage
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-
-      if (saved) {
-        try {
-          setTasks(JSON.parse(saved) as Task[]);
-        } catch {
-          setTasks(seedTasks);
-        }
-      } else {
-        setTasks(seedTasks);
-      }
-
-      setIsHydrated(true);
     }
   }, [user, authLoading]);
 
@@ -112,8 +121,13 @@ export function useTasks() {
     };
 
     if (user) {
-      const docRef = doc(db, "users", user.uid, "tasks", task.id);
-      await setDoc(docRef, task);
+      try {
+        const docRef = ref(db, `users/${user.uid}/tasks/${task.id}`);
+        await set(docRef, sanitizeTask(task));
+      } catch (error) {
+        console.error("Error adding task to RTDB:", error);
+        window.alert("Failed to save task to cloud. Please check your Database Rules!");
+      }
     } else {
       setTasks((current) => [task, ...current]);
     }
@@ -139,8 +153,8 @@ export function useTasks() {
             : task.completedAt
       };
       
-      const docRef = doc(db, "users", user.uid, "tasks", id);
-      await setDoc(docRef, updatedTask);
+      const docRef = ref(db, `users/${user.uid}/tasks/${id}`);
+      await set(docRef, sanitizeTask(updatedTask));
     } else {
       setTasks((current) =>
         current.map((task) => {
@@ -165,8 +179,8 @@ export function useTasks() {
 
   async function deleteTask(id: string) {
     if (user) {
-      const docRef = doc(db, "users", user.uid, "tasks", id);
-      await deleteDoc(docRef);
+      const docRef = ref(db, `users/${user.uid}/tasks/${id}`);
+      await remove(docRef);
     } else {
       setTasks((current) => current.filter((task) => task.id !== id));
     }
@@ -184,8 +198,8 @@ export function useTasks() {
         completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
       };
       
-      const docRef = doc(db, "users", user.uid, "tasks", id);
-      await setDoc(docRef, updatedTask);
+      const docRef = ref(db, `users/${user.uid}/tasks/${id}`);
+      await set(docRef, sanitizeTask(updatedTask));
     } else {
       setTasks((current) =>
         current.map((task) => {
@@ -205,13 +219,12 @@ export function useTasks() {
   async function clearAllTasks() {
     if (window.confirm("Are you sure you want to delete all tasks? This cannot be undone.")) {
       if (user) {
-        // Delete all from Firestore
-        const batch = writeBatch(db);
+        // Delete all from RTDB
+        const updates: Record<string, null> = {};
         tasks.forEach(task => {
-          const docRef = doc(db, "users", user.uid, "tasks", task.id);
-          batch.delete(docRef);
+          updates[`users/${user.uid}/tasks/${task.id}`] = null;
         });
-        await batch.commit();
+        await update(ref(db), updates);
       } else {
         setTasks([]);
       }

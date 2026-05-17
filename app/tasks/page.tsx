@@ -30,7 +30,7 @@ export default function TasksPage() {
       const matchesQuery = `${task.title} ${task.description}`.toLowerCase().includes(query.toLowerCase());
       const matchesStatus = status === "All" || task.status === status;
       const matchesPriority = priority === "All" || task.priority === priority;
-      const taskCategory = task.category || "General";
+      const taskCategory = task.category || "Deadline";
       const matchesCategory = category === "All" || taskCategory === category;
 
       return matchesQuery && matchesStatus && matchesPriority && matchesCategory;
@@ -40,14 +40,8 @@ export default function TasksPage() {
   const overallProgress = useMemo(() => {
     if (filteredTasks.length === 0) return 0;
     
-    const totalScore = filteredTasks.reduce((acc, task) => {
-      if (task.category === "Progress") {
-        return acc + (task.progressValue ?? 0);
-      }
-      return acc + (task.status === "Completed" ? 100 : 0);
-    }, 0);
-    
-    return Math.round(totalScore / filteredTasks.length);
+    const completed = filteredTasks.filter(t => t.status === "Completed").length;
+    return Math.round((completed / filteredTasks.length) * 100);
   }, [filteredTasks]);
 
   function openCreate() {
@@ -199,6 +193,7 @@ export default function TasksPage() {
               }}
               onDelete={handleDelete}
               onComplete={handleComplete}
+              onUpdateTask={updateTask}
               onStatusChange={(id, nextStatus) => {
                 setTaskStatus(id, nextStatus);
                 notify({ title: "Task moved", description: `Status changed to ${nextStatus}.` });
@@ -213,6 +208,7 @@ export default function TasksPage() {
               }}
               onDelete={handleDelete}
               onComplete={handleComplete}
+              onUpdateTask={updateTask}
             />
           )}
         </div>

@@ -24,17 +24,14 @@ export default function HomePage() {
     return tasks.filter((task) => {
       // Show routine tasks
       if (task.category === "Routine") return true;
-      
-      // Show progress tasks
-      if (task.category === "Progress") return true;
 
       // Show weekly tasks only if today is one of the scheduled days
       if (task.category === "Weekly" && task.daysOfWeek) {
         return task.daysOfWeek.includes(todayStr as any);
       }
 
-      // Show general tasks if they are not completed
-      if (task.category === "General" && task.status !== "Completed") return true;
+      // Show deadline tasks if they are not completed
+      if (task.category === "Deadline" && task.status !== "Completed") return true;
 
       return false;
     });
@@ -43,14 +40,8 @@ export default function HomePage() {
   const overallProgress = useMemo(() => {
     if (todaysTasks.length === 0) return 0;
     
-    const totalScore = todaysTasks.reduce((acc, task) => {
-      if (task.category === "Progress") {
-        return acc + (task.progressValue ?? 0);
-      }
-      return acc + (task.status === "Completed" ? 100 : 0);
-    }, 0);
-    
-    return Math.round(totalScore / todaysTasks.length);
+    const completed = todaysTasks.filter(t => t.status === "Completed").length;
+    return Math.round((completed / todaysTasks.length) * 100);
   }, [todaysTasks]);
 
   // Increment streak if 100% is reached
@@ -105,6 +96,7 @@ export default function HomePage() {
               onEdit={noop}
               onDelete={noop}
               onComplete={handleComplete}
+              onUpdateTask={updateTask}
               readOnly={true}
             />
           </div>

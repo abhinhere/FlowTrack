@@ -15,6 +15,7 @@ export function TaskList({
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
+  onUpdateTask?: (id: string, updates: Partial<Task>) => void;
   readOnly?: boolean;
 }) {
   if (tasks.length === 0) {
@@ -24,7 +25,7 @@ export function TaskList({
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} readOnly={readOnly} />
+        <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} onUpdateTask={onUpdateTask} readOnly={readOnly} />
       ))}
     </div>
   );

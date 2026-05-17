@@ -1,7 +1,13 @@
 export type TaskStatus = "Todo" | "In Progress" | "Completed";
 export type TaskPriority = "Low" | "Medium" | "High";
-export type TaskCategory = "General" | "Routine" | "Weekly" | "Progress";
+export type TaskCategory = "Routine" | "Weekly" | "Deadline";
 export type DayOfWeek = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+
+export type Subtask = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
 
 export type Task = {
   id: string;
@@ -10,7 +16,7 @@ export type Task = {
   priority: TaskPriority;
   category?: TaskCategory;
   daysOfWeek?: DayOfWeek[];
-  progressValue?: number;
+  subtasks?: Subtask[];
   deadline: string;
   status: TaskStatus;
   createdAt: string;
@@ -19,7 +25,7 @@ export type Task = {
 
 export const statusList: TaskStatus[] = ["Todo", "In Progress", "Completed"];
 export const priorityList: TaskPriority[] = ["Low", "Medium", "High"];
-export const categoryList: TaskCategory[] = ["General", "Routine", "Weekly", "Progress"];
+export const categoryList: TaskCategory[] = ["Routine", "Weekly", "Deadline"];
 export const daysOfWeekList: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const statusAccent: Record<TaskStatus, string> = {

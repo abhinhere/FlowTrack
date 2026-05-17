@@ -21,13 +21,15 @@ export function KanbanBoard({
   onEdit,
   onDelete,
   onComplete,
-  onStatusChange
+  onStatusChange,
+  onUpdateTask
 }: {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
   onStatusChange: (id: string, status: TaskStatus) => void;
+  onUpdateTask?: (id: string, updates: Partial<Task>) => void;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -66,6 +68,7 @@ export function KanbanBoard({
                         onEdit={onEdit}
                         onDelete={onDelete}
                         onComplete={onComplete}
+                        onUpdateTask={onUpdateTask}
                       />
                     ))}
                   </div>
@@ -114,12 +117,14 @@ function SortableTaskCard({
   task,
   onEdit,
   onDelete,
-  onComplete
+  onComplete,
+  onUpdateTask
 }: {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
+  onUpdateTask?: (id: string, updates: Partial<Task>) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
@@ -130,6 +135,7 @@ function SortableTaskCard({
         onEdit={onEdit}
         onDelete={onDelete}
         onComplete={onComplete}
+        onUpdateTask={onUpdateTask}
         dragAttributes={attributes}
         dragListeners={listeners}
         isDragging={isDragging}

@@ -1,16 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarDays, Check, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Check, Pencil, Trash2, CheckCircle2, Circle } from "lucide-react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/Badge";
-import { Task, formatDeadline, priorityAccent, statusAccent } from "@/lib/tasks";
+import { Task, formatDeadline, priorityAccent, statusAccent, Subtask } from "@/lib/tasks";
 
 export function TaskCard({
   task,
   onEdit,
   onDelete,
   onComplete,
+  onUpdateTask,
   dragListeners,
   dragAttributes,
   style,
@@ -21,12 +22,23 @@ export function TaskCard({
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onComplete: (id: string) => void;
+  onUpdateTask?: (id: string, updates: Partial<Task>) => void;
   dragListeners?: DraggableSyntheticListeners;
   dragAttributes?: DraggableAttributes;
   style?: React.CSSProperties;
   isDragging?: boolean;
   readOnly?: boolean;
 }) {
+  const handleSubtaskToggle = (subtaskId: string) => {
+    if (!onUpdateTask || !task.subtasks) return;
+    
+    const updatedSubtasks = task.subtasks.map(st => 
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    
+    onUpdateTask(task.id, { subtasks: updatedSubtasks });
+  };
+
   return (
     <motion.article
       layout
@@ -80,19 +92,26 @@ export function TaskCard({
         </div>
       )}
 
-      {task.category === "Progress" && (
-        <div className="mt-4 space-y-1.5">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="text-slate-400">Progress</span>
-            <span className="text-pink-300">{task.progressValue ?? 0}%</span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${task.progressValue ?? 0}%` }}
-              className="h-full bg-pink-400"
-            />
-          </div>
+      {task.subtasks && task.subtasks.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {task.subtasks.map(st => (
+            <button
+              key={st.id}
+              onClick={() => handleSubtaskToggle(st.id)}
+              disabled={readOnly}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`flex w-full items-start gap-2 text-left transition ${readOnly ? "cursor-default" : "hover:opacity-80"}`}
+            >
+              {st.completed ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+              )}
+              <span className={`text-sm ${st.completed ? "text-slate-500 line-through" : "text-slate-300"}`}>
+                {st.title}
+              </span>
+            </button>
+          ))}
         </div>
       )}
 
