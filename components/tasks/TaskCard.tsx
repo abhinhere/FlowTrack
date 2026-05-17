@@ -98,9 +98,9 @@ export function TaskCard({
             <button
               key={st.id}
               onClick={() => handleSubtaskToggle(st.id)}
-              disabled={readOnly}
+              disabled={!onUpdateTask}
               onPointerDown={(e) => e.stopPropagation()}
-              className={`flex w-full items-start gap-2 text-left transition ${readOnly ? "cursor-default" : "hover:opacity-80"}`}
+              className={`flex w-full items-start gap-2 text-left transition ${!onUpdateTask ? "cursor-default" : "hover:opacity-80"}`}
             >
               {st.completed ? (
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />

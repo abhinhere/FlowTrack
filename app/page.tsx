@@ -30,8 +30,15 @@ export default function HomePage() {
         return task.daysOfWeek.includes(todayStr as any);
       }
 
-      // Show deadline tasks if they are not completed
-      if (task.category === "Deadline" && task.status !== "Completed") return true;
+      // Show deadline tasks if they are not completed or if completed today
+      if (task.category === "Deadline") {
+        if (task.status !== "Completed") return true;
+        if (task.completedAt) {
+          const completedDate = new Date(task.completedAt).toDateString();
+          const todayDate = new Date().toDateString();
+          if (completedDate === todayDate) return true;
+        }
+      }
 
       return false;
     });
@@ -40,8 +47,19 @@ export default function HomePage() {
   const overallProgress = useMemo(() => {
     if (todaysTasks.length === 0) return 0;
 
-    const completed = todaysTasks.filter(t => t.status === "Completed").length;
-    return Math.round((completed / todaysTasks.length) * 100);
+    const totalWeight = todaysTasks.length;
+    let completedWeight = 0;
+
+    todaysTasks.forEach(task => {
+      if (task.status === "Completed") {
+        completedWeight += 1;
+      } else if (task.subtasks && task.subtasks.length > 0) {
+        const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+        completedWeight += completedSubtasks / task.subtasks.length;
+      }
+    });
+
+    return Math.round((completedWeight / totalWeight) * 100);
   }, [todaysTasks]);
 
   // Increment streak if 100% is reached
