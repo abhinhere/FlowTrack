@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup, signOut as firebaseSignOut, User } from "firebase/auth";
+import { signInWithRedirect, signOut as firebaseSignOut, User } from "firebase/auth";
 
 type AuthContextType = {
   user: User | null | undefined;
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithRedirect(auth, googleProvider);
     } catch (err) {
       console.error("Error signing in with Google:", err);
     }

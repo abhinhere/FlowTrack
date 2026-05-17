@@ -12,7 +12,8 @@ import {
   Search,
   Sparkles,
   X,
-  RotateCcw
+  RotateCcw,
+  Bird
 } from "lucide-react";
 import { useState } from "react";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
@@ -177,7 +178,7 @@ function Logo() {
   return (
     <Link href="/" className="flex items-center gap-3">
       <div className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-500 text-white shadow-glow">
-        <Plus className="h-5 w-5 rotate-45" />
+        <Bird className="h-5 w-5" />
       </div>
       <div>
         <p className="text-base font-semibold text-white">FlowTrack</p>
