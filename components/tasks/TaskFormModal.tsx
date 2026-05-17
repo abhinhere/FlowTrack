@@ -85,7 +85,7 @@ export function TaskFormModal({
             transition={{ type: "spring", stiffness: 250, damping: 24 }}
             onSubmit={handleSubmit}
             onMouseDown={(event) => event.stopPropagation()}
-            className="glass-panel w-full max-w-xl rounded-2xl p-5"
+            className="glass-panel w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl p-5"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
