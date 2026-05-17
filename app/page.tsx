@@ -39,7 +39,7 @@ export default function HomePage() {
 
   const overallProgress = useMemo(() => {
     if (todaysTasks.length === 0) return 0;
-    
+
     const completed = todaysTasks.filter(t => t.status === "Completed").length;
     return Math.round((completed / todaysTasks.length) * 100);
   }, [todaysTasks]);
@@ -57,7 +57,7 @@ export default function HomePage() {
   }
 
   // We provide a dummy edit/delete function since readOnly hides these buttons anyway
-  const noop = () => {};
+  const noop = () => { };
   const firstName = user?.displayName?.split(" ")[0] || "there";
 
   return (
@@ -96,7 +96,15 @@ export default function HomePage() {
               onEdit={noop}
               onDelete={noop}
               onComplete={handleComplete}
-              onUpdateTask={updateTask}
+              onUpdateTask={(id, updates) =>
+                updateTask(id, {
+                  title: updates.title || "",
+                  description: updates.description || "",
+                  priority: updates.priority || "medium",
+                  dueDate: updates.dueDate || "",
+                  completed: updates.completed || false,
+                })
+              }
               readOnly={true}
             />
           </div>
