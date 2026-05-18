@@ -12,8 +12,7 @@ import {
   Search,
   Sparkles,
   X,
-  RotateCcw,
-  Terminal
+  RotateCcw
 } from "lucide-react";
 import { useState } from "react";
 import { InstallAppButton } from "@/components/ui/InstallAppButton";
@@ -22,7 +21,6 @@ import { useStreak } from "@/hooks/useStreak";
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/dev-corner", label: "Dev Corner", icon: Terminal },
 ];
 
 import { useAuth } from "@/components/auth/AuthProvider";
