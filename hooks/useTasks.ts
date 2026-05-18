@@ -16,6 +16,26 @@ import { db } from "@/lib/firebase";
 
 const STORAGE_KEY = "flowtrack.tasks";
 
+/** Returns today's date as YYYY-MM-DD in local time */
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Resets Daily tasks that haven't been reset today back to Todo */
+function applyDailyReset(tasks: Task[]): { tasks: Task[]; changed: boolean } {
+  const today = todayStr();
+  let changed = false;
+  const updated = tasks.map(task => {
+    if (task.category === "Daily" && task.lastResetDate !== today) {
+      changed = true;
+      return { ...task, status: "Todo" as TaskStatus, completedAt: undefined, lastResetDate: today };
+    }
+    return task;
+  });
+  return { tasks: updated, changed };
+}
+
 type TaskInput = {
   title: string;
   description: string;
@@ -25,6 +45,7 @@ type TaskInput = {
   subtasks?: import("@/lib/tasks").Subtask[];
   deadline: string;
   status: TaskStatus;
+  reminderTime?: string;
 };
 
 export function sanitizeTask(obj: any): any {
@@ -47,7 +68,9 @@ export function useTasks() {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        setTasks(JSON.parse(saved) as Task[]);
+        const parsed = JSON.parse(saved) as Task[];
+        const { tasks: resetTasks } = applyDailyReset(parsed);
+        setTasks(resetTasks);
       } catch {
         setTasks(seedTasks);
       }
@@ -94,8 +117,17 @@ export function useTasks() {
           }
         }
 
-        rtdbTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setTasks(rtdbTasks);
+        // Apply daily reset to Firebase tasks
+        const { tasks: resetTasks, changed } = applyDailyReset(rtdbTasks);
+        if (changed) {
+          const updates: Record<string, any> = {};
+          resetTasks.forEach(t => {
+            if (t.category === "Daily") updates[`users/${user.uid}/tasks/${t.id}`] = sanitizeTask(t);
+          });
+          update(ref(db), updates);
+        }
+        resetTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setTasks(resetTasks);
       });
 
       return () => unsubscribe();

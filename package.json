@@ -13,6 +13,7 @@
     "@dnd-kit/core": "latest",
     "@dnd-kit/sortable": "latest",
     "@dnd-kit/utilities": "latest",
+    "@types/web-push": "^3.6.4",
     "clsx": "latest",
     "firebase": "^12.13.0",
     "framer-motion": "latest",
@@ -21,7 +22,8 @@
     "react": "latest",
     "react-dom": "latest",
     "react-firebase-hooks": "^5.1.1",
-    "recharts": "latest"
+    "recharts": "latest",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",

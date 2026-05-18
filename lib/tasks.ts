@@ -21,9 +21,13 @@ export type Task = {
   status: TaskStatus;
   createdAt: string;
   completedAt?: string;
+  /** HH:MM time for daily task reminder notification */
+  reminderTime?: string;
+  /** ISO date string (YYYY-MM-DD) of last auto-reset, used for Daily tasks */
+  lastResetDate?: string;
 };
 
-export const statusList: TaskStatus[] = ["Todo", "In Progress", "Completed"];
+export const statusList: TaskStatus[] = ["Todo", "Completed"];
 export const priorityList: TaskPriority[] = ["Low", "Medium", "High"];
 export const categoryList: TaskCategory[] = ["Daily", "Weekly", "Deadline"];
 export const daysOfWeekList: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

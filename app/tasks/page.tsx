@@ -57,54 +57,52 @@ export default function TasksPage() {
   }
 
   return (
-    <AppShell
-      title="Tasks"
-      eyebrow="Kanban"
-      action={
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-blue-400"
-        >
-          <Plus className="h-4 w-4" />
-          Add
-        </button>
-      }
-    >
+    <AppShell title="Tasks" eyebrow="Task List">
       {!isHydrated ? (
         <LoadingState />
       ) : (
         <div className="space-y-5">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-card">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <label className="flex flex-1 min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-surface-900 px-3">
-                <Search className="h-4 w-4 text-slate-500" />
+                <Search className="h-4 w-4 shrink-0 text-slate-500" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search tasks"
+                  placeholder="Search tasks..."
                   className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
                 />
               </label>
 
-              <div className="grid grid-cols-2 rounded-xl border border-white/10 bg-surface-900 p-1">
+              <div className="flex items-center justify-between sm:justify-end gap-3">
                 <button
-                  aria-label="Board view"
-                  onClick={() => setViewMode("board")}
-                  className={`rounded-lg px-3 py-2 text-sm transition ${
-                    viewMode === "board" ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"
-                  }`}
+                  onClick={openCreate}
+                  className="inline-flex flex-1 sm:flex-initial justify-center items-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-blue-400"
                 >
-                  <KanbanSquare className="mx-auto h-4 w-4" />
+                  <Plus className="h-4 w-4 shrink-0" />
+                  Add Task
                 </button>
-                <button
-                  aria-label="List view"
-                  onClick={() => setViewMode("list")}
-                  className={`rounded-lg px-3 py-2 text-sm transition ${
-                    viewMode === "list" ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"
-                  }`}
-                >
-                  <List className="mx-auto h-4 w-4" />
-                </button>
+
+                <div className="grid grid-cols-2 shrink-0 rounded-xl border border-white/10 bg-surface-900 p-1">
+                  <button
+                    aria-label="Board view"
+                    onClick={() => setViewMode("board")}
+                    className={`rounded-lg px-3 py-2 text-sm transition ${
+                      viewMode === "board" ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"
+                    }`}
+                  >
+                    <KanbanSquare className="mx-auto h-4 w-4" />
+                  </button>
+                  <button
+                    aria-label="List view"
+                    onClick={() => setViewMode("list")}
+                    className={`rounded-lg px-3 py-2 text-sm transition ${
+                      viewMode === "list" ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"
+                    }`}
+                  >
+                    <List className="mx-auto h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

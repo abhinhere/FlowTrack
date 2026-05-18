@@ -2,8 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, Flag, ListTodo, X, Folder, CalendarDays, Plus, Trash2 } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, TaskCategory, DayOfWeek, Subtask, priorityList, statusList, categoryList, daysOfWeekList, createTaskId } from "@/lib/tasks";
+import { Calendar, ListTodo, X, Folder, CalendarDays, Plus, Trash2, Clock } from "lucide-react";
+import { Task, TaskPriority, TaskStatus, TaskCategory, DayOfWeek, Subtask, statusList, categoryList, daysOfWeekList, createTaskId } from "@/lib/tasks";
 
 type FormState = {
   title: string;
@@ -14,6 +14,7 @@ type FormState = {
   subtasks: Subtask[];
   deadline: string;
   status: TaskStatus;
+  reminderTime: string;
 };
 
 const emptyForm: FormState = {
@@ -24,7 +25,8 @@ const emptyForm: FormState = {
   daysOfWeek: [],
   subtasks: [],
   deadline: "",
-  status: "Todo"
+  status: "Todo",
+  reminderTime: ""
 };
 
 export function TaskFormModal({
@@ -51,7 +53,8 @@ export function TaskFormModal({
         daysOfWeek: task.daysOfWeek ?? [],
         subtasks: task.subtasks ?? [],
         deadline: task.deadline,
-        status: task.status
+        status: task.status,
+        reminderTime: task.reminderTime ?? ""
       });
     } else {
       setForm(emptyForm);
@@ -81,6 +84,9 @@ export function TaskFormModal({
     }));
     setNewSubtaskTitle("");
   }
+
+  const isDaily = form.category === "Daily";
+  const isWeekly = form.category === "Weekly";
 
   return (
     <AnimatePresence>
@@ -119,6 +125,7 @@ export function TaskFormModal({
             </div>
 
             <div className="mt-6 space-y-4">
+              {/* Title */}
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
                   <ListTodo className="h-4 w-4 text-blue-300" />
@@ -132,34 +139,21 @@ export function TaskFormModal({
                 />
               </label>
 
+              {/* Description */}
               <label className="block">
                 <span className="mb-2 text-sm font-medium text-slate-300">Description</span>
                 <textarea
                   value={form.description}
                   onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  rows={4}
+                  rows={3}
                   className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/50 focus:bg-white/[0.07]"
                   placeholder="Add useful detail, context, or acceptance notes."
                 />
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-                <label>
-                  <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
-                    <Flag className="h-4 w-4 text-violet-300" />
-                    Priority
-                  </span>
-                  <select
-                    value={form.priority}
-                    onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as TaskPriority }))}
-                    className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
-                  >
-                    {priorityList.map((priority) => (
-                      <option key={priority}>{priority}</option>
-                    ))}
-                  </select>
-                </label>
-
+              {/* Category + Deadline/Time */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Category */}
                 <label>
                   <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
                     <Folder className="h-4 w-4 text-amber-300" />
@@ -176,36 +170,40 @@ export function TaskFormModal({
                   </select>
                 </label>
 
-                <label className={form.category === "Daily" ? "opacity-50 pointer-events-none grayscale" : ""}>
-                  <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
-                    <Calendar className="h-4 w-4 text-cyan-300" />
-                    Deadline
-                  </span>
-                  <input
-                    type="date"
-                    value={form.category === "Daily" ? "" : form.deadline}
-                    onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))}
-                    disabled={form.category === "Daily"}
-                    className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
-                  />
-                </label>
-
-                <label>
-                  <span className="mb-2 text-sm font-medium text-slate-300">Status</span>
-                  <select
-                    value={form.status}
-                    onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as TaskStatus }))}
-                    className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
-                  >
-                    {statusList.map((status) => (
-                      <option key={status}>{status}</option>
-                    ))}
-                  </select>
-                </label>
+                {/* Deadline (Deadline) or Reminder Time (Daily) */}
+                {isDaily && (
+                  <label>
+                    <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
+                      <Clock className="h-4 w-4 text-pink-300" />
+                      Reminder Time
+                    </span>
+                    <input
+                      type="time"
+                      value={form.reminderTime}
+                      onChange={(event) => setForm((current) => ({ ...current, reminderTime: event.target.value }))}
+                      className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
+                    />
+                  </label>
+                )}
+                {!isDaily && !isWeekly && (
+                  <label>
+                    <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300">
+                      <Calendar className="h-4 w-4 text-cyan-300" />
+                      Deadline
+                    </span>
+                    <input
+                      type="date"
+                      value={form.deadline}
+                      onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))}
+                      className="w-full rounded-xl border border-white/10 bg-surface-850 px-3 py-3 text-sm text-white outline-none focus:border-blue-400/50"
+                    />
+                  </label>
+                )}
               </div>
 
+              {/* Weekly day picker */}
               <AnimatePresence mode="popLayout">
-                {form.category === "Weekly" && (
+                {isWeekly && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -215,7 +213,7 @@ export function TaskFormModal({
                     <label className="block pt-2">
                       <span className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
                         <CalendarDays className="h-4 w-4 text-emerald-300" />
-                        Specific Days
+                        Scheduled Days
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {daysOfWeekList.map((day) => {
@@ -248,46 +246,44 @@ export function TaskFormModal({
                 )}
               </AnimatePresence>
 
-              {/* Subtasks Section */}
-              <div className="pt-2">
-                <span className="mb-2 text-sm font-medium text-slate-300">Subtasks</span>
-                <div className="space-y-2 mb-3">
-                  {form.subtasks.map((st) => (
-                    <div key={st.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-surface-850 px-3 py-2">
-                      <span className="flex-1 text-sm text-slate-200">{st.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => setForm(curr => ({...curr, subtasks: curr.subtasks.filter(s => s.id !== st.id)}))}
-                        className="text-slate-500 hover:text-rose-400 transition"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+              {/* Subtasks — hidden for Daily and Weekly tasks (Deadline only) */}
+              {!isDaily && !isWeekly && (
+                <div className="pt-2">
+                  <span className="mb-2 block text-sm font-medium text-slate-300">Subtasks</span>
+                  <div className="space-y-2 mb-3">
+                    {form.subtasks.map((st) => (
+                      <div key={st.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-surface-850 px-3 py-2">
+                        <span className="flex-1 text-sm text-slate-200">{st.title}</span>
+                        <button
+                          type="button"
+                          onClick={() => setForm(curr => ({ ...curr, subtasks: curr.subtasks.filter(s => s.id !== st.id) }))}
+                          className="text-slate-500 hover:text-rose-400 transition"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); addSubtask(); }
+                      }}
+                      placeholder="Add a subtask..."
+                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/50 focus:bg-white/[0.07]"
+                    />
+                    <button
+                      type="button"
+                      onClick={addSubtask}
+                      className="rounded-xl bg-white/10 p-2.5 text-slate-300 hover:bg-white/20 hover:text-white transition"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={newSubtaskTitle}
-                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addSubtask();
-                      }
-                    }}
-                    placeholder="Add a subtask..."
-                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/50 focus:bg-white/[0.07]"
-                  />
-                  <button
-                    type="button"
-                    onClick={addSubtask}
-                    className="rounded-xl bg-white/10 p-2.5 text-slate-300 hover:bg-white/20 hover:text-white transition"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
+              )}
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
