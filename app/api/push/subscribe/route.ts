@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 
 export async function POST(request: Request) {
   try {
-    const { subscription, userId } = await request.json();
+    const { subscription, userId, timeZone } = await request.json();
 
     if (!subscription || !subscription.endpoint) {
       return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
@@ -14,7 +14,12 @@ export async function POST(request: Request) {
     // Create a safe database key from endpoint URL
     const safeKey = subscription.endpoint.replace(/[.#$/[\]]/g, "_");
 
-    await set(ref(db, `pushSubscriptions/${uid}/${safeKey}`), subscription);
+    const subWithTz = {
+      ...subscription,
+      timeZone: timeZone || "UTC"
+    };
+
+    await set(ref(db, `pushSubscriptions/${uid}/${safeKey}`), subWithTz);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

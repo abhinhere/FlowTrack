@@ -6,6 +6,26 @@ import { db } from "@/lib/firebase";
 // Global variable to keep track of background cron loop in Next.js dev/prod server
 let cronStarted = false;
 
+function getCurrentHHMMInTimeZone(timeZone: string): string {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hourPart = parts.find(p => p.type === "hour")?.value || "00";
+    const minutePart = parts.find(p => p.type === "minute")?.value || "00";
+    let hourInt = parseInt(hourPart, 10);
+    if (hourInt === 24) hourInt = 0;
+    return `${String(hourInt).padStart(2, "0")}:${minutePart}`;
+  } catch (err) {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  }
+}
+
 function startBackgroundCron(publicKey: string, privateKey: string) {
   if (cronStarted) return;
   cronStarted = true;
@@ -16,9 +36,6 @@ function startBackgroundCron(publicKey: string, privateKey: string) {
   // Check every 60 seconds
   setInterval(async () => {
     try {
-      const now = new Date();
-      const currentHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
       // Fetch all users and all push subscriptions
       const [usersSnap, subsSnap] = await Promise.all([
         get(ref(db, "users")),
@@ -40,33 +57,50 @@ function startBackgroundCron(publicKey: string, privateKey: string) {
           if (
             task &&
             task.category === "Daily" &&
-            task.reminderTime === currentHHMM &&
+            task.reminderTime &&
             task.status !== "Completed"
           ) {
-            // Check if already reminded today to avoid duplicate pushes
-            const lastPushKey = `lastPush_${task.id}`;
-            const todayStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-            if (task[lastPushKey] === todayStr) continue;
-
-            console.log(`⏰ Sending Web Push for daily task [${task.title}] to user [${userId}]`);
-
-            // Mark in DB that we pushed today
-            await set(ref(db, `users/${userId}/tasks/${task.id}/${lastPushKey}`), todayStr);
-
-            const payload = JSON.stringify({
-              title: `⏰ FlowTrack Reminder: ${task.title}`,
-              body: task.description || "It's time to complete your daily routine!",
-              url: "/"
-            });
-
             for (const sub of subscriptions as any[]) {
-              try {
-                await webpush.sendNotification(sub, payload);
-              } catch (err: any) {
-                if (err.statusCode === 410 || err.statusCode === 404) {
-                  // Subscription expired or unsubscribed
-                } else {
-                  console.error("Web push error:", err);
+              const userTz = sub.timeZone || "UTC";
+              const currentHHMM = getCurrentHHMMInTimeZone(userTz);
+
+              if (task.reminderTime === currentHHMM) {
+                // Check if already reminded today in that timezone
+                const nowInTz = new Intl.DateTimeFormat("en-US", {
+                  timeZone: userTz,
+                  year: "numeric",
+                  month: "numeric",
+                  day: "numeric"
+                }).format(new Date());
+                
+                const lastPushKey = `lastPush_${task.id}`;
+                if (task[lastPushKey] === nowInTz) continue;
+
+                console.log(`⏰ Sending Web Push for daily task [${task.title}] to user [${userId}] (TZ: ${userTz}, Time: ${currentHHMM})`);
+
+                // Mark in DB that we pushed today
+                await set(ref(db, `users/${userId}/tasks/${task.id}/${lastPushKey}`), nowInTz);
+                task[lastPushKey] = nowInTz; // update in-memory for remaining subs
+
+                const payload = JSON.stringify({
+                  title: `⏰ FlowTrack Reminder: ${task.title}`,
+                  body: task.description || "It's time to complete your daily routine!",
+                  url: "/"
+                });
+
+                try {
+                  await webpush.sendNotification(sub, payload);
+                  console.log("✅ Web push notification sent successfully.");
+                } catch (err: any) {
+                  if (err.statusCode === 410 || err.statusCode === 404) {
+                    // Subscription expired or unsubscribed, remove it from DB
+                    if (sub.endpoint) {
+                      const safeKey = sub.endpoint.replace(/[.#$/[\]]/g, "_");
+                      await set(ref(db, `pushSubscriptions/${userId}/${safeKey}`), null);
+                    }
+                  } else {
+                    console.error("Web push error:", err);
+                  }
                 }
               }
             }

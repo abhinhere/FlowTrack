@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Task } from "@/lib/tasks";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getLocalAnonUid } from "@/hooks/useTasks";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -24,17 +25,30 @@ function urlBase64ToUint8Array(base64String: string) {
  */
 export function useNotifications(tasks: Task[]) {
   const scheduledRef = useRef<Set<string>>(new Set());
-  const { user } = useAuth();
-  const pushSubscribedRef = useRef(false);
+  const { user, loading: authLoading } = useAuth();
+  const subscribedUserIdRef = useRef<string | null>(null);
+  const [permission, setPermission] = useState<string>("default");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
 
   // 1. Request permission & setup Web Push subscription
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (authLoading) return;
+
+    const currentUserId = user ? user.uid : getLocalAnonUid();
 
     async function initPush() {
       try {
         if (Notification.permission === "default") {
-          await Notification.requestPermission();
+          const perm = await Notification.requestPermission();
+          setPermission(perm);
+        } else {
+          setPermission(Notification.permission);
         }
 
         if (Notification.permission !== "granted") return;
@@ -55,17 +69,19 @@ export function useNotifications(tasks: Task[]) {
             });
           }
 
-          if (sub && !pushSubscribedRef.current) {
-            pushSubscribedRef.current = true;
+          if (sub && subscribedUserIdRef.current !== currentUserId) {
+            subscribedUserIdRef.current = currentUserId;
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             await fetch("/api/push/subscribe", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 subscription: sub,
-                userId: user?.uid || "anonymous"
+                userId: currentUserId,
+                timeZone
               })
             });
-            console.log("✅ Web Push subscription active and synced with server.");
+            console.log(`✅ Web Push subscription active for user [${currentUserId}] and synced with server.`);
           }
         }
       } catch (err) {
@@ -74,9 +90,9 @@ export function useNotifications(tasks: Task[]) {
     }
 
     initPush();
-  }, [user]);
+  }, [user, authLoading]);
 
-  // 2. Re-schedule instant alarms whenever tasks change (for active session / SW)
+  // 2. Re-schedule instant alarms whenever tasks change or permission is granted
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
@@ -122,5 +138,5 @@ export function useNotifications(tasks: Task[]) {
           }, msUntilFire);
         }
       });
-  }, [tasks]);
+  }, [tasks, permission]);
 }

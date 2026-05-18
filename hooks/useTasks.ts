@@ -58,6 +58,16 @@ export function sanitizeTask(obj: any): any {
   return sanitized;
 }
 
+export function getLocalAnonUid(): string {
+  if (typeof window === "undefined") return "anon_default";
+  let uid = window.localStorage.getItem("flowtrack_anon_uid");
+  if (!uid) {
+    uid = "anon_" + Math.random().toString(36).slice(2);
+    window.localStorage.setItem("flowtrack_anon_uid", uid);
+  }
+  return uid;
+}
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -105,6 +115,12 @@ export function useTasks() {
               
               update(ref(db), updates).then(() => {
                 window.localStorage.removeItem(STORAGE_KEY);
+                const anonUid = window.localStorage.getItem("flowtrack_anon_uid");
+                if (anonUid) {
+                  remove(ref(db, `users/${anonUid}`)).catch(() => {});
+                  remove(ref(db, `pushSubscriptions/${anonUid}`)).catch(() => {});
+                  window.localStorage.removeItem("flowtrack_anon_uid");
+                }
               });
               
               // Sort locally for immediate feedback
@@ -134,10 +150,16 @@ export function useTasks() {
     }
   }, [user, authLoading]);
 
-  // Sync back to local storage ONLY if NOT logged in
+  // Sync back to local storage and RTDB guest node ONLY if NOT logged in
   useEffect(() => {
     if (isHydrated && !user && !authLoading) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      const anonUid = getLocalAnonUid();
+      const updates: Record<string, any> = {};
+      tasks.forEach(t => {
+        updates[`users/${anonUid}/tasks/${t.id}`] = sanitizeTask(t);
+      });
+      set(ref(db, `users/${anonUid}/tasks`), updates).catch(() => {});
     }
   }, [isHydrated, tasks, user, authLoading]);
 
