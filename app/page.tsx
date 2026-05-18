@@ -1,19 +1,13 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useEffect, useState } from "react";
-import { Activity, Plus, Sun, Target, CalendarDays } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AlertTriangle, BellRing, BriefcaseBusiness, CircleDollarSign, Globe2, TrendingUp, UsersRound } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { TaskCard } from "@/components/tasks/TaskCard";
-import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { useToast } from "@/components/ui/ToastProvider";
-import { useTasks } from "@/hooks/useTasks";
-import { useStreak } from "@/hooks/useStreak";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { useNotifications } from "@/hooks/useNotifications";
-import { Task } from "@/lib/tasks";
+import { useMadeWebsTracker } from "@/hooks/useMadeWebsTracker";
+import { formatCurrency, formatTrackerDate, getEmployeeStats, getPendingReminderCandidates, getUpcomingRenewals, monthlyRevenueData } from "@/lib/madewebs";
 
+<<<<<<< HEAD
 /** Returns today's short weekday name, e.g. "Mon" */
 function getTodayShort() {
   return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(new Date());
@@ -303,4 +297,23 @@ export default function HomePage() {
       />
     </AppShell>
   );
+=======
+const statusColors: Record<string, string> = { Planning: "#38bdf8", "In Progress": "#3b82f6", Review: "#f59e0b", Completed: "#22c55e", Blocked: "#ef4444" };
+
+export default function DashboardPage() {
+  const { employees, projects, reminders, notifications, isHydrated } = useMadeWebsTracker();
+  if (!isHydrated) return <AppShell title="Dashboard" eyebrow="MadeWebs command center"><LoadingState /></AppShell>;
+  const upcomingRenewals = getUpcomingRenewals(projects);
+  const pendingReminderCandidates = getPendingReminderCandidates(projects);
+  const totalRevenue = projects.reduce((sum, project) => sum + project.revenue, 0);
+  const completedWorks = projects.reduce((sum, project) => sum + project.completedWorks, 0);
+  const statusData = Object.entries(projects.reduce<Record<string, number>>((acc, project) => { acc[project.status] = (acc[project.status] ?? 0) + 1; return acc; }, {})).map(([status, count]) => ({ status, count }));
+  const employeePerformance = employees.map((employee) => ({ employee, stats: getEmployeeStats(employee.id, projects) }));
+  return <AppShell title="Dashboard" eyebrow="MadeWebs command center"><div className="space-y-6"><section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><StatCard icon={BriefcaseBusiness} label="Active projects" value={String(projects.filter((p) => p.status !== "Completed").length)} /><StatCard icon={Globe2} label="Upcoming renewals" value={String(upcomingRenewals.length)} tone="warning" /><StatCard icon={BellRing} label="Pending reminders" value={String(pendingReminderCandidates.length)} tone="danger" /><StatCard icon={CircleDollarSign} label="Tracked revenue" value={formatCurrency(totalRevenue)} tone="success" /></section><section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]"><ChartPanel title="Monthly Revenue" subtitle={`${completedWorks} completed works across assigned projects`} icon={TrendingUp}><ResponsiveContainer width="100%" height="100%"><LineChart data={monthlyRevenueData}><CartesianGrid stroke="rgba(148,163,184,0.14)" vertical={false} /><XAxis dataKey="month" stroke="#64748b" tickLine={false} axisLine={false} /><YAxis stroke="#64748b" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value) / 1000}k`} /><Tooltip contentStyle={{ background: "#11141d", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }} formatter={(value) => formatCurrency(Number(value))} /><Line type="monotone" dataKey="revenue" stroke="#22d3ee" strokeWidth={3} dot={{ r: 4, fill: "#22d3ee" }} /></LineChart></ResponsiveContainer></ChartPanel><ChartPanel title="Active Projects" subtitle="Status spread for live delivery" icon={BriefcaseBusiness}><ResponsiveContainer width="100%" height="100%"><BarChart data={statusData}><CartesianGrid stroke="rgba(148,163,184,0.14)" vertical={false} /><XAxis dataKey="status" stroke="#64748b" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} stroke="#64748b" tickLine={false} axisLine={false} /><Tooltip contentStyle={{ background: "#11141d", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }} /><Bar dataKey="count" radius={[8, 8, 0, 0]}>{statusData.map((entry) => <Cell key={entry.status} fill={statusColors[entry.status] ?? "#3b82f6"} />)}</Bar></BarChart></ResponsiveContainer></ChartPanel></section><section className="grid gap-4 xl:grid-cols-3"><Panel title="Upcoming Domain Renewals" icon={Globe2}>{upcomingRenewals.length ? upcomingRenewals.map((project) => <AlertRow key={project.id} title={project.domain?.domainName ?? project.name} detail={`${project.clientName} · ${formatTrackerDate(project.domain?.renewalDate ?? project.deadline)}`} badge={project.domain?.status ?? "Due Soon"} />) : <EmptyPanelText>No renewals due within 5 days.</EmptyPanelText>}</Panel><Panel title="Pending Reminders" icon={BellRing}>{pendingReminderCandidates.length ? pendingReminderCandidates.slice(0, 5).map(({ project, type, dueDate }) => <AlertRow key={`${project.id}-${type}`} title={type} detail={`${project.name} · ${formatTrackerDate(dueDate)}`} badge="Pending" />) : <EmptyPanelText>No pending reminder triggers.</EmptyPanelText>}</Panel><Panel title="Notification Center" icon={AlertTriangle}>{notifications.slice(0, 5).map((notification) => <AlertRow key={notification.id} title={notification.title} detail={notification.description} badge={notification.tone} />)}</Panel></section><section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-card"><div className="mb-4 flex items-center gap-2"><UsersRound className="h-5 w-5 text-blue-300" /><h2 className="text-base font-semibold text-white">Employee Performance</h2></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">{employeePerformance.map(({ employee, stats }) => <div key={employee.id} className="rounded-xl border border-white/10 bg-surface-850 p-3"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-lg bg-blue-500/15 text-xs font-bold text-blue-100">{employee.avatar}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{employee.name}</p><p className="truncate text-xs text-slate-500">{employee.role}</p></div></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-950"><div className="h-full rounded-full bg-emerald-400" style={{ width: `${stats.completionRate}%` }} /></div><p className="mt-2 text-xs text-slate-400">{stats.completionRate}% completion · {formatCurrency(stats.revenueGenerated)}</p></div>)}</div></section></div></AppShell>;
+>>>>>>> 4b272b696ce641828a1b4afb69d1e9d0ee8d5ff8
 }
+function StatCard({ icon: Icon, label, value, tone = "info" }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; tone?: "info" | "warning" | "danger" | "success" }) { const toneClass = { info: "text-blue-300 bg-blue-500/10", warning: "text-amber-300 bg-amber-500/10", danger: "text-rose-300 bg-rose-500/10", success: "text-emerald-300 bg-emerald-500/10" }[tone]; return <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-card"><div className={`grid h-10 w-10 place-items-center rounded-xl ${toneClass}`}><Icon className="h-5 w-5" /></div><p className="mt-4 text-sm text-slate-400">{label}</p><p className="mt-1 text-2xl font-semibold text-white">{value}</p></div>; }
+function ChartPanel({ title, subtitle, icon: Icon, children }: { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) { return <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-card"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-base font-semibold text-white">{title}</h2><p className="text-sm text-slate-400">{subtitle}</p></div><Icon className="h-5 w-5 text-blue-300" /></div><div className="h-72">{children}</div></div>; }
+function Panel({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) { return <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-card"><div className="mb-3 flex items-center gap-2"><Icon className="h-4 w-4 text-blue-300" /><h2 className="text-sm font-semibold text-white">{title}</h2></div><div className="space-y-2">{children}</div></div>; }
+function AlertRow({ title, detail, badge }: { title: string; detail: string; badge: string }) { return <div className="rounded-xl border border-white/10 bg-surface-850 p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-medium text-white">{title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{detail}</p></div><span className="shrink-0 rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-slate-400">{badge}</span></div></div>; }
+function EmptyPanelText({ children }: { children: React.ReactNode }) { return <p className="rounded-xl border border-dashed border-white/10 px-3 py-6 text-center text-sm text-slate-500">{children}</p>; }
