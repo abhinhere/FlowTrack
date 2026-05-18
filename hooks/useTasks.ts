@@ -94,14 +94,14 @@ export function useTasks() {
   useEffect(() => {
     if (authLoading) return;
 
-    if (user) {
-      // User is logged in, sync with RTDB
-      const tasksRef = ref(db, `users/${user.uid}/tasks`);
+    const targetUid = user ? user.uid : getLocalAnonUid();
+    const tasksRef = ref(db, `users/${targetUid}/tasks`);
+    
+    const unsubscribe = onValue(tasksRef, (snapshot) => {
+      const data = snapshot.val();
+      const rtdbTasks = data ? (Object.values(data) as Task[]) : [];
       
-      const unsubscribe = onValue(tasksRef, (snapshot) => {
-        const data = snapshot.val();
-        const rtdbTasks = data ? (Object.values(data) as Task[]) : [];
-        
+      if (user) {
         // Data Migration: Check if local storage has tasks that aren't in RTDB yet
         const saved = window.localStorage.getItem(STORAGE_KEY);
         if (saved && rtdbTasks.length === 0) {
@@ -123,7 +123,6 @@ export function useTasks() {
                 }
               });
               
-              // Sort locally for immediate feedback
               localTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
               setTasks(localTasks);
               return;
@@ -132,36 +131,25 @@ export function useTasks() {
             console.error("Migration error", e);
           }
         }
+      }
 
-        // Apply daily reset to Firebase tasks
-        const { tasks: resetTasks, changed } = applyDailyReset(rtdbTasks);
-        if (changed) {
-          const updates: Record<string, any> = {};
-          resetTasks.forEach(t => {
-            if (t.category === "Daily") updates[`users/${user.uid}/tasks/${t.id}`] = sanitizeTask(t);
-          });
-          update(ref(db), updates);
-        }
-        resetTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setTasks(resetTasks);
-      });
+      const { tasks: resetTasks, changed } = applyDailyReset(rtdbTasks);
+      if (changed) {
+        const updates: Record<string, any> = {};
+        resetTasks.forEach(t => {
+          if (t.category === "Daily") updates[`users/${targetUid}/tasks/${t.id}`] = sanitizeTask(t);
+        });
+        update(ref(db), updates);
+      }
+      resetTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setTasks(resetTasks);
+      if (!user) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(resetTasks));
+      }
+    });
 
-      return () => unsubscribe();
-    }
+    return () => unsubscribe();
   }, [user, authLoading]);
-
-  // Sync back to local storage and RTDB guest node ONLY if NOT logged in
-  useEffect(() => {
-    if (isHydrated && !user && !authLoading) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-      const anonUid = getLocalAnonUid();
-      const updates: Record<string, any> = {};
-      tasks.forEach(t => {
-        updates[`users/${anonUid}/tasks/${t.id}`] = sanitizeTask(t);
-      });
-      set(ref(db, `users/${anonUid}/tasks`), updates).catch(() => {});
-    }
-  }, [isHydrated, tasks, user, authLoading]);
 
   const stats = useMemo(() => calculateStats(tasks), [tasks]);
 
@@ -174,114 +162,68 @@ export function useTasks() {
       completedAt: input.status === "Completed" ? now : undefined
     };
 
-    if (user) {
-      try {
-        const docRef = ref(db, `users/${user.uid}/tasks/${task.id}`);
-        await set(docRef, sanitizeTask(task));
-      } catch (error) {
-        console.error("Error adding task to RTDB:", error);
-        window.alert("Failed to save task to cloud. Please check your Database Rules!");
-      }
-    } else {
-      setTasks((current) => [task, ...current]);
+    const targetUid = user ? user.uid : getLocalAnonUid();
+    try {
+      const docRef = ref(db, `users/${targetUid}/tasks/${task.id}`);
+      await set(docRef, sanitizeTask(task));
+    } catch (error) {
+      console.error("Error adding task to RTDB:", error);
     }
-    
     return task;
   }
 
   async function updateTask(id: string, input: Partial<Task>) {
-    if (user) {
-      const task = tasks.find(t => t.id === id);
-      if (!task) return;
-      
-      const becameCompleted = input.status !== undefined && task.status !== "Completed" && input.status === "Completed";
-      const leftCompleted = input.status !== undefined && task.status === "Completed" && input.status !== "Completed";
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    
+    const becameCompleted = input.status !== undefined && task.status !== "Completed" && input.status === "Completed";
+    const leftCompleted = input.status !== undefined && task.status === "Completed" && input.status !== "Completed";
 
-      const updatedTask = {
-        ...task,
-        ...input,
-        completedAt: becameCompleted
-          ? new Date().toISOString()
-          : leftCompleted
-            ? undefined
-            : task.completedAt
-      };
-      
-      const docRef = ref(db, `users/${user.uid}/tasks/${id}`);
-      await set(docRef, sanitizeTask(updatedTask));
-    } else {
-      setTasks((current) =>
-        current.map((task) => {
-          if (task.id !== id) return task;
-
-          const becameCompleted = input.status !== undefined && task.status !== "Completed" && input.status === "Completed";
-          const leftCompleted = input.status !== undefined && task.status === "Completed" && input.status !== "Completed";
-
-          return {
-            ...task,
-            ...input,
-            completedAt: becameCompleted
-              ? new Date().toISOString()
-              : leftCompleted
-                ? undefined
-                : task.completedAt
-          };
-        })
-      );
-    }
+    const updatedTask = {
+      ...task,
+      ...input,
+      completedAt: becameCompleted
+        ? new Date().toISOString()
+        : leftCompleted
+          ? undefined
+          : task.completedAt
+    };
+    
+    const targetUid = user ? user.uid : getLocalAnonUid();
+    const docRef = ref(db, `users/${targetUid}/tasks/${id}`);
+    await set(docRef, sanitizeTask(updatedTask));
   }
 
   async function deleteTask(id: string) {
-    if (user) {
-      const docRef = ref(db, `users/${user.uid}/tasks/${id}`);
-      await remove(docRef);
-    } else {
-      setTasks((current) => current.filter((task) => task.id !== id));
-    }
+    const targetUid = user ? user.uid : getLocalAnonUid();
+    const docRef = ref(db, `users/${targetUid}/tasks/${id}`);
+    await remove(docRef);
   }
 
   async function setTaskStatus(id: string, status: TaskStatus) {
-    if (user) {
-      const task = tasks.find(t => t.id === id);
-      if (!task) return;
-      
-      const isNowCompleted = status === "Completed";
-      const updatedTask = {
-        ...task,
-        status,
-        completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
-      };
-      
-      const docRef = ref(db, `users/${user.uid}/tasks/${id}`);
-      await set(docRef, sanitizeTask(updatedTask));
-    } else {
-      setTasks((current) =>
-        current.map((task) => {
-          if (task.id !== id) return task;
-          const isNowCompleted = status === "Completed";
-
-          return {
-            ...task,
-            status,
-            completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
-          };
-        })
-      );
-    }
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    
+    const isNowCompleted = status === "Completed";
+    const updatedTask = {
+      ...task,
+      status,
+      completedAt: isNowCompleted ? task.completedAt ?? new Date().toISOString() : undefined
+    };
+    
+    const targetUid = user ? user.uid : getLocalAnonUid();
+    const docRef = ref(db, `users/${targetUid}/tasks/${id}`);
+    await set(docRef, sanitizeTask(updatedTask));
   }
 
   async function clearAllTasks() {
     if (window.confirm("Are you sure you want to delete all tasks? This cannot be undone.")) {
-      if (user) {
-        // Delete all from RTDB
-        const updates: Record<string, null> = {};
-        tasks.forEach(task => {
-          updates[`users/${user.uid}/tasks/${task.id}`] = null;
-        });
-        await update(ref(db), updates);
-      } else {
-        setTasks([]);
-      }
+      const targetUid = user ? user.uid : getLocalAnonUid();
+      const updates: Record<string, null> = {};
+      tasks.forEach(task => {
+        updates[`users/${targetUid}/tasks/${task.id}`] = null;
+      });
+      await update(ref(db), updates);
     }
   }
 
