@@ -152,7 +152,6 @@ export function useTasks() {
     return () => unsubscribe();
   }, [user, authLoading]);
 
-<<<<<<< HEAD
   // Sync back to local storage (always) and RTDB guest node (if not logged in)
   useEffect(() => {
     if (isHydrated && !authLoading) {
@@ -167,9 +166,6 @@ export function useTasks() {
       }
     }
   }, [isHydrated, tasks, user, authLoading]);
-
-=======
->>>>>>> 4b272b696ce641828a1b4afb69d1e9d0ee8d5ff8
   const stats = useMemo(() => calculateStats(tasks), [tasks]);
 
   async function addTask(input: TaskInput) {

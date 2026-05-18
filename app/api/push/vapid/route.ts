@@ -26,7 +26,6 @@ function getCurrentHHMMInTimeZone(timeZone: string): string {
   }
 }
 
-<<<<<<< HEAD
 export async function checkAndSendReminders(pubKey?: string, privKey?: string) {
   try {
     let publicKey = pubKey;
@@ -93,61 +92,6 @@ export async function checkAndSendReminders(pubKey?: string, privKey?: string) {
                 url: "/"
               });
 
-=======
-export async function checkAndSendReminders(publicKey: string, privateKey: string) {
-  try {
-    webpush.setVapidDetails("mailto:admin@flowtrack.local", publicKey, privateKey);
-
-    const [usersSnap, subsSnap] = await Promise.all([
-      get(ref(db, "users")),
-      get(ref(db, "pushSubscriptions"))
-    ]);
-
-    const usersData = usersSnap.val() || {};
-    const subsData = subsSnap.val() || {};
-
-    for (const [userId, userData] of Object.entries(usersData)) {
-      const tasks: any = userData && typeof userData === "object" && "tasks" in userData ? (userData as any).tasks : {};
-      if (!tasks) continue;
-
-      const userSubs = subsData[userId] || {};
-      const subscriptions = Object.values(userSubs);
-      if (subscriptions.length === 0) continue;
-
-      for (const task of Object.values(tasks) as any[]) {
-        if (
-          task &&
-          task.category === "Daily" &&
-          task.reminderTime &&
-          task.status !== "Completed"
-        ) {
-          for (const sub of subscriptions as any[]) {
-            const userTz = sub.timeZone || "UTC";
-            const currentHHMM = getCurrentHHMMInTimeZone(userTz);
-
-            if (task.reminderTime === currentHHMM) {
-              const nowInTz = new Intl.DateTimeFormat("en-US", {
-                timeZone: userTz,
-                year: "numeric",
-                month: "numeric",
-                day: "numeric"
-              }).format(new Date());
-              
-              const lastPushKey = `lastPush_${task.id}`;
-              if (task[lastPushKey] === nowInTz) continue;
-
-              console.log(`⏰ Sending Web Push for daily task [${task.title}] to user [${userId}] (TZ: ${userTz}, Time: ${currentHHMM})`);
-
-              await set(ref(db, `users/${userId}/tasks/${task.id}/${lastPushKey}`), nowInTz);
-              task[lastPushKey] = nowInTz;
-
-              const payload = JSON.stringify({
-                title: `⏰ FlowTrack Reminder: ${task.title}`,
-                body: task.description || "It's time to complete your daily routine!",
-                url: "/"
-              });
-
->>>>>>> 4b272b696ce641828a1b4afb69d1e9d0ee8d5ff8
               try {
                 await webpush.sendNotification(sub, payload);
                 console.log("✅ Web push notification sent successfully.");
@@ -167,11 +111,7 @@ export async function checkAndSendReminders(publicKey: string, privateKey: strin
       }
     }
   } catch (err) {
-<<<<<<< HEAD
     console.error("checkAndSendReminders error:", err);
-=======
-    console.error("Reminder check error:", err);
->>>>>>> 4b272b696ce641828a1b4afb69d1e9d0ee8d5ff8
   }
 }
 
@@ -180,20 +120,13 @@ function startBackgroundCron(publicKey: string, privateKey: string) {
   cronStarted = true;
   console.log("🚀 Starting FlowTrack background Web Push runner...");
 
-<<<<<<< HEAD
+  // Run immediately on start
+  checkAndSendReminders(publicKey, privateKey);
+
   // Check every 30 seconds for precise timing
   setInterval(() => {
     checkAndSendReminders(publicKey, privateKey);
   }, 30000);
-=======
-  // Run immediately on start
-  checkAndSendReminders(publicKey, privateKey);
-
-  // Check every 60 seconds
-  setInterval(() => {
-    checkAndSendReminders(publicKey, privateKey);
-  }, 60000);
->>>>>>> 4b272b696ce641828a1b4afb69d1e9d0ee8d5ff8
 }
 
 export async function GET() {
