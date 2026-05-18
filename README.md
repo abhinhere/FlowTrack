@@ -19,7 +19,6 @@ A minimal, focused task management PWA built for daily flow. Manage your tasks a
 - **Cloud Sync** — Firebase Realtime Database keeps tasks in sync across devices
 - **Offline Fallback** — LocalStorage is used when not signed in
 - **PWA** — Install as a standalone app on mobile or desktop
-- **Dev Corner** — Personal dashboard showing GitHub contributions, LeetCode stats, and WakaTime coding activity
 
 ---
 
@@ -89,18 +88,13 @@ Open [http://localhost:3000](http://localhost:3000).
 app/
   page.tsx              # Home — daily checklist & progress
   tasks/page.tsx        # Tasks — kanban/list with search
-  dev-corner/page.tsx   # Dev metrics dashboard
-  analytics/page.tsx    # Redirects to home
-  api/                  # Proxy routes for GitHub, LeetCode, WakaTime
 components/
   layout/AppShell.tsx   # Sidebar, header, nav, back button
   tasks/                # TaskCard, TaskList, KanbanBoard, TaskFormModal
-  dev/                  # GitHubStats, LeetCodeStats, CodingTime
   ui/                   # Toast, LoadingState, InstallAppButton
 hooks/
   useTasks.ts           # Task CRUD with Firebase/LocalStorage sync
   useStreak.ts          # Daily streak logic
-  useDevSettings.ts     # Dev Corner credentials
 lib/
   tasks.ts              # Task types, constants, helpers
   firebase.ts           # Firebase config
