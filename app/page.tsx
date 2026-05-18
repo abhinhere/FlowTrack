@@ -279,6 +279,19 @@ export default function HomePage() {
             )}
           </AnimatePresence>
 
+          {/* ── Quick Add Button at bottom ── */}
+          {hasAnyTask && (
+            <div className="pt-4 flex justify-center">
+              <button
+                onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
+                className="inline-flex items-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-6 py-3 text-sm font-medium text-slate-300 hover:bg-white/[0.08] hover:text-white hover:border-white/40 transition shadow-sm"
+              >
+                <Plus className="h-4 w-4 text-blue-400" />
+                Add New Task
+              </button>
+            </div>
+          )}
+
         </div>
       )}
 

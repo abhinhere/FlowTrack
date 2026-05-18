@@ -104,7 +104,8 @@ export function useTasks() {
         
         // Data Migration: Check if local storage has tasks that aren't in RTDB yet
         const saved = window.localStorage.getItem(STORAGE_KEY);
-        if (saved && rtdbTasks.length === 0) {
+        const hasMigrated = window.localStorage.getItem("flowtrack_migrated");
+        if (saved && rtdbTasks.length === 0 && !hasMigrated) {
           try {
             const localTasks = JSON.parse(saved) as Task[];
             if (localTasks.length > 0) {
@@ -114,7 +115,7 @@ export function useTasks() {
               });
               
               update(ref(db), updates).then(() => {
-                window.localStorage.removeItem(STORAGE_KEY);
+                window.localStorage.setItem("flowtrack_migrated", "true");
                 const anonUid = window.localStorage.getItem("flowtrack_anon_uid");
                 if (anonUid) {
                   remove(ref(db, `users/${anonUid}`)).catch(() => {});
@@ -150,16 +151,18 @@ export function useTasks() {
     }
   }, [user, authLoading]);
 
-  // Sync back to local storage and RTDB guest node ONLY if NOT logged in
+  // Sync back to local storage (always) and RTDB guest node (if not logged in)
   useEffect(() => {
-    if (isHydrated && !user && !authLoading) {
+    if (isHydrated && !authLoading) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-      const anonUid = getLocalAnonUid();
-      const updates: Record<string, any> = {};
-      tasks.forEach(t => {
-        updates[`users/${anonUid}/tasks/${t.id}`] = sanitizeTask(t);
-      });
-      set(ref(db, `users/${anonUid}/tasks`), updates).catch(() => {});
+      if (!user) {
+        const anonUid = getLocalAnonUid();
+        const updates: Record<string, any> = {};
+        tasks.forEach(t => {
+          updates[`users/${anonUid}/tasks/${t.id}`] = sanitizeTask(t);
+        });
+        set(ref(db, `users/${anonUid}/tasks`), updates).catch(() => {});
+      }
     }
   }, [isHydrated, tasks, user, authLoading]);
 
